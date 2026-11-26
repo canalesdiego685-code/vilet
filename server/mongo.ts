@@ -99,6 +99,7 @@ async function ensureMongoConnection() {
 
 export async function readMongoStatus(): Promise<MongoStatus> {
   const configured = Boolean(process.env.MONGODB_URI)
+  if (configured && mongoose.connection.readyState !== 1) await connectMongoDB()
   if (mongoose.connection.readyState !== 1 || !mongoose.connection.db) return { connected: false, configured }
 
   try {

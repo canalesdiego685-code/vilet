@@ -674,6 +674,21 @@
   .inventory-product-card h3,.inventory-products-heading h2 { color: #152235; }
 }
 .inventory-add { background: #8463da; }
+.inventory-exit { background: #b94752; }
+.inventory-history-card { min-width: 0; margin-bottom: 24px; padding: 0 16px 16px; border: 1px solid rgba(255,255,255,.11); border-radius: 15px; background: rgba(8,22,40,.88); box-shadow: 0 12px 28px rgba(0,0,0,.17); }
+.inventory-history-card .inventory-products-heading { margin-top: 17px; }
+.inventory-history-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.inventory-history-table th { padding: 10px 8px; color: #aebed0; font-size: 9px; letter-spacing: .06em; text-align: left; white-space: nowrap; }
+.inventory-history-table td { padding: 10px 8px; border-top: 1px solid rgba(255,255,255,.07); color: #e5ebf3; vertical-align: top; }
+.inventory-history-table td:nth-child(5) { font-weight: 750; text-align: right; }
+.inventory-movement-badge { display: inline-block; padding: 4px 8px; border-radius: 20px; font-size: 9px; font-weight: 850; letter-spacing: .05em; text-transform: uppercase; }
+.inventory-movement-entrada { color: #bff4d8; background: rgba(37,151,99,.28); }
+.inventory-movement-salida { color: #ffd0d4; background: rgba(190,67,79,.28); }
+.inventory-stock-hint { margin: 0; padding: 9px 11px; border-radius: 8px; background: rgba(89,151,223,.12); color: #bdcadd; font-size: 11px; }
+.inventory-stock-hint strong { color: #fff; }
+.inventory-screen-light .inventory-history-card { background: rgba(16,38,66,.92); }
+.inventory-screen-light .inventory-stock-hint strong { color: #26384e; }
+@media (max-width: 760px) { .inventory-history-table { min-width: 800px; } }
 .inventory-notice { margin: 0 0 14px; padding: 11px 14px; border: 1px solid rgba(100,220,155,.32); border-radius: 10px; background: rgba(21,100,69,.3); color: #c3f4d8; font-size: 12px; text-align: center; }
 .inventory-modal-backdrop { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 18px; background: rgba(4,10,18,.76); backdrop-filter: blur(7px); }
 .inventory-modal { width: min(470px,100%); padding: 29px; position: relative; border: 1px solid rgba(255,209,63,.46); border-radius: 20px; background: linear-gradient(145deg,#173b67,#0e213a); color: #f6f8fc; box-shadow: 0 25px 75px rgba(0,0,0,.45); }
@@ -744,6 +759,12 @@
   .inventory-product-stats span,.inventory-product-card small { color: #63748b; font-size: 7px; }
   .inventory-product-card small { margin-top: 5px; }
   .inventory-footnote { color: #66768b; font-size: 8px; }
+  .inventory-history-card { margin-bottom: 12px; padding: 0 9px 9px; border: 1px solid #ccd7e4; border-radius: 8px; background: #fff !important; box-shadow: none; }
+  .inventory-history-card .inventory-products-heading { margin: 9px 0 5px; }
+  .inventory-history-table { font-size: 7px; }
+  .inventory-history-table th { padding: 5px 4px; color: #526882; font-size: 6px; }
+  .inventory-history-table td { padding: 5px 4px; border-color: #e3e8ee; color: #24364d; }
+  .inventory-history-table tr { break-inside: avoid; }
 }
 /* Pantalla de Materia Prima */
 .raw-material-screen {
@@ -1596,6 +1617,21 @@
   .inventory-product-card h3,.inventory-products-heading h2 { color: #152235; }
 }
 .inventory-add { background: #8463da; }
+.inventory-exit { background: #b94752; }
+.inventory-history-card { min-width: 0; margin-bottom: 24px; padding: 0 16px 16px; border: 1px solid rgba(255,255,255,.11); border-radius: 15px; background: rgba(8,22,40,.88); box-shadow: 0 12px 28px rgba(0,0,0,.17); }
+.inventory-history-card .inventory-products-heading { margin-top: 17px; }
+.inventory-history-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.inventory-history-table th { padding: 10px 8px; color: #aebed0; font-size: 9px; letter-spacing: .06em; text-align: left; white-space: nowrap; }
+.inventory-history-table td { padding: 10px 8px; border-top: 1px solid rgba(255,255,255,.07); color: #e5ebf3; vertical-align: top; }
+.inventory-history-table td:nth-child(5) { font-weight: 750; text-align: right; }
+.inventory-movement-badge { display: inline-block; padding: 4px 8px; border-radius: 20px; font-size: 9px; font-weight: 850; letter-spacing: .05em; text-transform: uppercase; }
+.inventory-movement-entrada { color: #bff4d8; background: rgba(37,151,99,.28); }
+.inventory-movement-salida { color: #ffd0d4; background: rgba(190,67,79,.28); }
+.inventory-stock-hint { margin: 0; padding: 9px 11px; border-radius: 8px; background: rgba(89,151,223,.12); color: #bdcadd; font-size: 11px; }
+.inventory-stock-hint strong { color: #fff; }
+.inventory-screen-light .inventory-history-card { background: rgba(16,38,66,.92); }
+.inventory-screen-light .inventory-stock-hint strong { color: #26384e; }
+@media (max-width: 760px) { .inventory-history-table { min-width: 800px; } }
 .inventory-notice { margin: 0 0 14px; padding: 11px 14px; border: 1px solid rgba(100,220,155,.32); border-radius: 10px; background: rgba(21,100,69,.3); color: #c3f4d8; font-size: 12px; text-align: center; }
 .inventory-modal-backdrop { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 18px; background: rgba(4,10,18,.76); backdrop-filter: blur(7px); }
 .inventory-modal { width: min(470px,100%); padding: 29px; position: relative; border: 1px solid rgba(255,209,63,.46); border-radius: 20px; background: linear-gradient(145deg,#173b67,#0e213a); color: #f6f8fc; box-shadow: 0 25px 75px rgba(0,0,0,.45); }
@@ -1666,6 +1702,12 @@
   .inventory-product-stats span,.inventory-product-card small { color: #63748b; font-size: 7px; }
   .inventory-product-card small { margin-top: 5px; }
   .inventory-footnote { color: #66768b; font-size: 8px; }
+  .inventory-history-card { margin-bottom: 12px; padding: 0 9px 9px; border: 1px solid #ccd7e4; border-radius: 8px; background: #fff !important; box-shadow: none; }
+  .inventory-history-card .inventory-products-heading { margin: 9px 0 5px; }
+  .inventory-history-table { font-size: 7px; }
+  .inventory-history-table th { padding: 5px 4px; color: #526882; font-size: 6px; }
+  .inventory-history-table td { padding: 5px 4px; border-color: #e3e8ee; color: #24364d; }
+  .inventory-history-table tr { break-inside: avoid; }
 }
 /* Pantalla de Materia Prima */
 .raw-material-screen {

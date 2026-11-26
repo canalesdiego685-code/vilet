@@ -70,6 +70,19 @@ export type InventoryItem = {
   salidas_piezas: number | string | null
   fecha_actualizacion: string | null
 }
+
+export type InventoryMovement = {
+  id: number
+  tipo_movimiento: 'entrada' | 'salida'
+  producto: string
+  presentacion: string | null
+  cantidad: number | string
+  unidad: 'KG' | 'PZA' | null
+  fecha: string
+  usuario: string | null
+  motivo: string | null
+  cliente: string | null
+}
 export type RawMaterial = {
   id: number
   nombre: string

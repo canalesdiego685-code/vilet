@@ -83,7 +83,7 @@ export function ReportsPage({ isLight, onBack, roleLabel = 'SECRETARÍA' }: Prop
     }).join(',') + ')'
   const heading = mode === 'Producción' ? 'Entradas registradas' : mode === 'Ventas' ? 'Salidas registradas' : 'Existencias por producto'
   const note = mode === 'Diario' || mode === 'Semanal' || mode === 'Mensual'
-    ? 'Este corte usa la fecha de última actualización del inventario. Aún no hay una tabla con fecha individual para cada movimiento.'
+    ? 'Este corte usa la fecha de última actualización del inventario. Consulta Inventario para ver el historial fechado de movimientos.'
     : 'Cifras acumuladas consultadas desde el inventario de Vilet.'
 
   return (

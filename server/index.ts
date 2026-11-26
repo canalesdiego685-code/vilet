@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs'
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
-import { closeDatabasePool, createViletAccount, findUserForLogin, addInventoryEntry, addRawMaterial, deleteRawMaterial, readDatabaseStatus, readInventory, readProducts, readRawMaterials, updateRawMaterial, readNotices, createNotice, markNoticeRead, markAllNoticesRead, readClients, recordClientPurchase, updateClient, readClientHistory, readEmployees, addEmployee, deactivateEmployee, readAttendanceWeek, saveAttendance, readAdminAccounts, updateAdminAccount, deactivateAdminAccount, isActiveAccount, deleteNotice } from './db.js'
+import { closeDatabasePool, createViletAccount, findUserForLogin, addInventoryEntry, addInventoryExit, addRawMaterial, deleteRawMaterial, readDatabaseStatus, readInventory, readInventoryMovements, readProducts, readRawMaterials, updateRawMaterial, readNotices, createNotice, markNoticeRead, markAllNoticesRead, readClients, recordClientPurchase, updateClient, readClientHistory, readEmployees, addEmployee, deactivateEmployee, readAttendanceWeek, saveAttendance, readAdminAccounts, updateAdminAccount, deactivateAdminAccount, isActiveAccount, deleteNotice } from './db.js'
 import { closeMongoDB, connectMongoDB, createPerformanceSheet, deletePerformanceSheet, readMongoStatus, readPerformanceFile, readPerformanceSheets } from './mongo.js'
 
 const port = Number(process.env.API_PORT ?? 3001)
@@ -9,7 +9,7 @@ const host = process.env.HOST ?? '127.0.0.1'
 const authSecret = process.env.AUTH_SECRET ?? randomBytes(32).toString('hex')
 const requestSessions = new WeakMap<IncomingMessage, AuthSession>()
 
-type AuthSession = { userId: number; role: string; expiresAt: number }
+type AuthSession = { userId: number; username: string; role: string; expiresAt: number }
 
 function createAuthToken(session: AuthSession) {
   const payload = Buffer.from(JSON.stringify(session)).toString('base64url')
@@ -72,7 +72,7 @@ function sessionFromRequest(request: IncomingMessage): AuthSession | null {
 
   try {
     const session = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as Partial<AuthSession>
-    if (typeof session.userId !== 'number' || typeof session.role !== 'string' || typeof session.expiresAt !== 'number') return null
+    if (typeof session.userId !== 'number' || typeof session.username !== 'string' || typeof session.role !== 'string' || typeof session.expiresAt !== 'number') return null
     if (session.expiresAt <= Date.now()) return null
     return session as AuthSession
   } catch {
@@ -156,7 +156,7 @@ async function handleLogin(request: IncomingMessage, response: ServerResponse) {
     }
 
     const name = [user.nombre, user.apellido_paterno, user.apellido_materno].filter(Boolean).join(' ')
-    const token = createAuthToken({ userId: user.id_usuario, role: user.rol, expiresAt: Date.now() + 8 * 60 * 60 * 1000 })
+    const token = createAuthToken({ userId: user.id_usuario, username: user.usuario, role: user.rol, expiresAt: Date.now() + 8 * 60 * 60 * 1000 })
     sendJson(response, 200, {
       token,
       user: {
@@ -467,10 +467,13 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
   }
 
   if (request.method === 'POST' && pathname === '/api/inventory') {
+    const session = await requireSession(request, response)
+    if (!session) return
     const body = await readJsonBody(request)
     const idProducto = Number(body.id_producto)
     const cantidad = Number(body.cantidad)
     const unidad = body.unidad
+    const observaciones = field(body, 'observaciones')
     if (!Number.isInteger(idProducto) || idProducto < 1 || !Number.isFinite(cantidad) || cantidad <= 0) {
       sendJson(response, 400, { message: 'Selecciona un producto y una cantidad mayor que cero.' })
       return
@@ -479,16 +482,86 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
       sendJson(response, 400, { message: 'Selecciona kilogramos o piezas.' })
       return
     }
-    const result = await addInventoryEntry(idProducto, cantidad, unidad)
-    if (result === 'product-not-found') {
-      sendJson(response, 404, { message: 'No se encontró el producto seleccionado.' })
+    if (unidad === 'PZA' && !Number.isInteger(cantidad)) {
+      sendJson(response, 400, { message: 'Las piezas deben registrarse con números enteros.' })
       return
     }
-    if (result === 'unit-mismatch') {
-      sendJson(response, 400, { message: 'La unidad no corresponde al producto seleccionado.' })
+    if (observaciones.length > 500) {
+      sendJson(response, 400, { message: 'Las observaciones no pueden superar 500 caracteres.' })
       return
     }
-    sendJson(response, 201, { message: 'Existencias agregadas al inventario.' })
+    try {
+      const result = await addInventoryEntry(idProducto, cantidad, unidad, session.username, observaciones)
+      if (result === 'product-not-found') {
+        sendJson(response, 404, { message: 'No se encontró el producto seleccionado.' })
+        return
+      }
+      if (result === 'unit-mismatch') {
+        sendJson(response, 400, { message: 'La unidad no corresponde al producto seleccionado.' })
+        return
+      }
+      sendJson(response, 201, { message: 'Entrada registrada y existencias actualizadas.' })
+    } catch (error) {
+      console.error('No fue posible registrar la entrada:', error instanceof Error ? error.message : 'Error desconocido')
+      sendJson(response, 503, { message: 'No se pudo guardar la entrada de inventario.' })
+    }
+    return
+  }
+
+  if (request.method === 'POST' && pathname === '/api/inventory/exit') {
+    const session = await requireSession(request, response)
+    if (!session) return
+    const body = await readJsonBody(request)
+    const idProducto = Number(body.id_producto)
+    const cantidad = Number(body.cantidad)
+    const unidad = body.unidad
+    const motivo = field(body, 'motivo')
+    const cliente = field(body, 'cliente')
+    if (!Number.isInteger(idProducto) || idProducto < 1 || !Number.isFinite(cantidad) || cantidad <= 0) {
+      sendJson(response, 400, { message: 'Selecciona un producto y una cantidad mayor que cero.' })
+      return
+    }
+    if (unidad !== 'KG' && unidad !== 'PZA') {
+      sendJson(response, 400, { message: 'Selecciona kilogramos o piezas.' })
+      return
+    }
+    if (unidad === 'PZA' && !Number.isInteger(cantidad)) {
+      sendJson(response, 400, { message: 'Las piezas deben registrarse con números enteros.' })
+      return
+    }
+    if (!motivo || motivo.length > 100 || cliente.length > 150) {
+      sendJson(response, 400, { message: 'Indica un motivo válido y un cliente o destino de hasta 150 caracteres.' })
+      return
+    }
+    try {
+      const result = await addInventoryExit(idProducto, cantidad, unidad, session.username, motivo, cliente)
+      if (result === 'product-not-found') {
+        sendJson(response, 404, { message: 'No se encontró el producto seleccionado.' })
+        return
+      }
+      if (result === 'unit-mismatch') {
+        sendJson(response, 400, { message: 'La unidad no corresponde al producto seleccionado.' })
+        return
+      }
+      if (result === 'insufficient-stock') {
+        sendJson(response, 409, { message: 'No hay existencias suficientes para registrar esa salida.' })
+        return
+      }
+      sendJson(response, 201, { message: 'Salida registrada y existencias actualizadas.' })
+    } catch (error) {
+      console.error('No fue posible registrar la salida:', error instanceof Error ? error.message : 'Error desconocido')
+      sendJson(response, 503, { message: 'No se pudo guardar la salida de inventario.' })
+    }
+    return
+  }
+
+  if (request.method === 'GET' && pathname === '/api/inventory/movements') {
+    try {
+      sendJson(response, 200, { items: await readInventoryMovements() })
+    } catch (error) {
+      console.error('No fue posible leer los movimientos:', error instanceof Error ? error.message : 'Error desconocido')
+      sendJson(response, 503, { message: 'No se pudo consultar el historial de inventario.' })
+    }
     return
   }
 

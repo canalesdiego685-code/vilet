@@ -1,4 +1,4 @@
-import type { InventoryItem } from '../types'
+import type { InventoryItem, InventoryMovement } from '../types'
 
 function numberValue(value: number | string | null | undefined) {
   const result = Number(value ?? 0)
@@ -147,6 +147,45 @@ function createSummarySheet(items: InventoryItem[]) {
     '</worksheet>'
 }
 
+function createMovementsSheet(movements: InventoryMovement[]) {
+  const rows: string[] = [
+    row(1, [cell('A1', 'VILET  |  HISTORIAL DE INVENTARIO', 1)], 34),
+    row(2, [cell('A2', 'Entradas y salidas · Generado el ' + new Date().toLocaleString('es-MX'), 2)], 23),
+    row(3, []),
+    row(4, columnCells(4, ['FECHA', 'TIPO', 'PRODUCTO', 'UNIDAD', 'CANTIDAD', 'USUARIO', 'DETALLE'], () => 3), 25),
+  ]
+  movements.forEach((movement, index) => {
+    const rowNumber = index + 5
+    const zebra = index % 2 === 1
+    const values: Array<string | number> = [
+      movement.fecha,
+      movement.tipo_movimiento.toUpperCase(),
+      movement.producto,
+      movement.unidad ?? movement.presentacion ?? '',
+      numberValue(movement.cantidad),
+      movement.usuario ?? '',
+      [movement.motivo, movement.cliente].filter(Boolean).join(' · '),
+    ]
+    rows.push(row(rowNumber, columnCells(rowNumber, values, (column) => {
+      if (column === 4) return zebra ? 7 : 5
+      return zebra ? 6 : 4
+    })))
+  })
+  const lastRow = String(Math.max(4, movements.length + 4))
+  return xmlHeader() +
+    '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+    '<dimension ref="A1:G' + lastRow + '"/>' +
+    '<sheetViews><sheetView workbookViewId="0" showGridLines="0"><pane ySplit="4" topLeftCell="A5" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>' +
+    '<sheetFormatPr defaultRowHeight="21"/>' +
+    '<cols><col min="1" max="1" width="21" customWidth="1"/><col min="2" max="2" width="12" customWidth="1"/><col min="3" max="3" width="25" customWidth="1"/><col min="4" max="4" width="11" customWidth="1"/><col min="5" max="5" width="13" customWidth="1"/><col min="6" max="6" width="18" customWidth="1"/><col min="7" max="7" width="35" customWidth="1"/></cols>' +
+    '<sheetData>' + rows.join('') + '</sheetData>' +
+    '<mergeCells count="2"><mergeCell ref="A1:G1"/><mergeCell ref="A2:G2"/></mergeCells>' +
+    '<autoFilter ref="A4:G' + lastRow + '"/>' +
+    '<pageMargins left="0.25" right="0.25" top="0.5" bottom="0.5" header="0.2" footer="0.2"/>' +
+    '<pageSetup orientation="landscape" paperSize="9" fitToWidth="1" fitToHeight="0"/>' +
+    '</worksheet>'
+}
+
 const encoder = new TextEncoder()
 const crcTable = new Uint32Array(256)
 for (let index = 0; index < 256; index += 1) {
@@ -240,20 +279,20 @@ function zipStore(files: Array<[string, string]>) {
   return concatenate([...localParts, directory, end])
 }
 
-export function downloadInventoryWorkbook(items: InventoryItem[]) {
+export function downloadInventoryWorkbook(items: InventoryItem[], movements: InventoryMovement[]) {
   const workbook = xmlHeader() +
-    '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView activeTab="0"/></bookViews><sheets><sheet name="Inventario" sheetId="1" r:id="rId1"/><sheet name="Resumen" sheetId="2" r:id="rId2"/></sheets></workbook>'
+    '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView activeTab="0"/></bookViews><sheets><sheet name="Inventario" sheetId="1" r:id="rId1"/><sheet name="Resumen" sheetId="2" r:id="rId2"/><sheet name="Movimientos" sheetId="3" r:id="rId3"/></sheets></workbook>'
   const relationships = xmlHeader() +
-    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet3.xml"/><Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'
   const rootRelationships = xmlHeader() +
     '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/></Relationships>'
   const contentTypes = xmlHeader() +
-    '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/><Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/></Types>'
+    '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet3.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/><Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/></Types>'
   const styles = xmlHeader() +
     '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="1"><numFmt numFmtId="164" formatCode="#,##0.00"/></numFmts><fonts count="5"><font><sz val="11"/><name val="Aptos"/></font><font><b/><sz val="17"/><color rgb="FFFFFFFF"/><name val="Aptos Display"/></font><font><sz val="10"/><color rgb="FFD8E1EC"/><name val="Aptos"/></font><font><b/><sz val="10"/><color rgb="FFFFFFFF"/><name val="Aptos"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Aptos"/></font></fonts><fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF142B49"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FF2867C9"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFEAF1F8"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left/><right/><top/><bottom style="thin"><color rgb="FFD7E0EB"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="10"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0"><alignment vertical="center"/></xf><xf numFmtId="0" fontId="2" fillId="2" borderId="0" xfId="0"><alignment vertical="center"/></xf><xf numFmtId="0" fontId="3" fillId="3" borderId="0" xfId="0"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0"><alignment vertical="center"/></xf><xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0"><alignment horizontal="right" vertical="center"/></xf><xf numFmtId="0" fontId="0" fillId="4" borderId="1" xfId="0"><alignment vertical="center"/></xf><xf numFmtId="164" fontId="0" fillId="4" borderId="1" xfId="0"><alignment horizontal="right" vertical="center"/></xf><xf numFmtId="0" fontId="4" fillId="2" borderId="0" xfId="0"><alignment vertical="center"/></xf><xf numFmtId="164" fontId="4" fillId="2" borderId="0" xfId="0"><alignment horizontal="right" vertical="center"/></xf></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>'
   const now = new Date().toISOString()
   const core = xmlHeader() + '<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:creator>Vilet</dc:creator><cp:lastModifiedBy>Vilet</cp:lastModifiedBy><dcterms:created xsi:type="dcterms:W3CDTF">' + now + '</dcterms:created><dcterms:modified xsi:type="dcterms:W3CDTF">' + now + '</dcterms:modified></cp:coreProperties>'
-  const app = xmlHeader() + '<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes"><Application>Vilet</Application><TitlesOfParts><vt:vector size="2" baseType="lpstr"><vt:lpstr>Inventario</vt:lpstr><vt:lpstr>Resumen</vt:lpstr></vt:vector></TitlesOfParts></Properties>'
+  const app = xmlHeader() + '<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes"><Application>Vilet</Application><TitlesOfParts><vt:vector size="3" baseType="lpstr"><vt:lpstr>Inventario</vt:lpstr><vt:lpstr>Resumen</vt:lpstr><vt:lpstr>Movimientos</vt:lpstr></vt:vector></TitlesOfParts></Properties>'
   const bytes = zipStore([
     ['[Content_Types].xml', contentTypes],
     ['_rels/.rels', rootRelationships],
@@ -264,6 +303,7 @@ export function downloadInventoryWorkbook(items: InventoryItem[]) {
     ['xl/styles.xml', styles],
     ['xl/worksheets/sheet1.xml', createInventorySheet(items)],
     ['xl/worksheets/sheet2.xml', createSummarySheet(items)],
+    ['xl/worksheets/sheet3.xml', createMovementsSheet(movements)],
   ])
   const blob = new Blob([bytes as BlobPart], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
   const url = URL.createObjectURL(blob)

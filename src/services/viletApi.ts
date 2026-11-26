@@ -1,4 +1,4 @@
-import type { AccountRegistration, AuthenticatedUser, DatabaseHealth, InventoryItem, Product, RawMaterial, ViletClient, ClientPurchase, ViletNotice, PerformanceSheet, ViletEmployee, AttendanceRecord, AttendanceCode, RegisteredAccount, UserRole, ViletAdminAccount } from '../types'
+import type { AccountRegistration, AuthenticatedUser, DatabaseHealth, InventoryItem, InventoryMovement, Product, RawMaterial, ViletClient, ClientPurchase, ViletNotice, PerformanceSheet, ViletEmployee, AttendanceRecord, AttendanceCode, RegisteredAccount, UserRole, ViletAdminAccount } from '../types'
 
 type ProductResponse = { items: Product[] }
 type LoginResponse = { user: AuthenticatedUser; token: string }
@@ -84,8 +84,17 @@ export function registerViletAccount(account: AccountRegistration) {
   return postJson<RegisteredAccount>('/api/auth/register', account)
 }
 
-export function addInventoryEntry(entry: { id_producto: number; cantidad: number; unidad: 'KG' | 'PZA' }) {
+export async function fetchInventoryMovements() {
+  const result = await readJson<{ items: InventoryMovement[] }>('/api/inventory/movements')
+  return result.items
+}
+
+export function addInventoryEntry(entry: { id_producto: number; cantidad: number; unidad: 'KG' | 'PZA'; observaciones?: string }) {
   return postJson<{ message: string }>('/api/inventory', entry)
+}
+
+export function addInventoryExit(entry: { id_producto: number; cantidad: number; unidad: 'KG' | 'PZA'; motivo: string; cliente?: string }) {
+  return postJson<{ message: string }>('/api/inventory/exit', entry)
 }
 export async function fetchRawMaterials() {
   const result = await readJson<{ items: RawMaterial[] }>('/api/raw-materials')
