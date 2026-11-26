@@ -1,0 +1,16 @@
+:root {
+  font-family: "Aptos", "Segoe UI", system-ui, -apple-system, sans-serif;
+  color: #f8f3e4;
+  background: #0e1828;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-weight: 400;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; min-height: 100vh; }
+button { font: inherit; }
+button:focus-visible { outline: 2px solid #ffd34c; outline-offset: 3px; }
+::selection { color: #14233a; background: #f6cb47; }
