@@ -85,6 +85,7 @@ export function PerformancePage({ canManage, onBack, roleLabel = 'SECRETARÍA' }
     event.preventDefault()
     const form = event.currentTarget
     if (!file) { setError('Selecciona una imagen o un PDF para subir.'); return }
+    if (file.size > 3 * 1024 * 1024) { setError('El archivo supera el límite de 3 MB permitido por el alojamiento web.'); return }
     setSaving(true)
     setError('')
     setNotice('')
@@ -139,7 +140,7 @@ export function PerformancePage({ canManage, onBack, roleLabel = 'SECRETARÍA' }
           <label className="performance-file-label">Seleccionar archivo<input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={(event) => setFile(event.currentTarget.files?.[0] ?? null)} /><span>{file ? file.name : 'Sin archivo seleccionado'}</span></label>
           <button className="performance-upload-button" type="submit" disabled={saving}>{saving ? 'Subiendo…' : 'Subir archivo'}</button>
         </form>
-        <p className="performance-upload-hint">Puedes subir una fotografía o PDF de hasta 5 MB. Los archivos se guardan en {storage}.</p>
+        <p className="performance-upload-hint">Puedes subir una fotografía o PDF de hasta 3 MB. Los archivos se guardan en {storage}.</p>
       </> : <p className="performance-readonly-note">Administración puede consultar y visualizar las hojas. La subida y eliminación están reservadas para Secretaría.</p>}
 
       {error && <p className="performance-alert performance-alert-error" role="alert">{error}</p>}

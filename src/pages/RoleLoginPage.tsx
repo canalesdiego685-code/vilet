@@ -23,12 +23,6 @@ export function RoleLoginPage({ role, isLight, onBack, onToggleTheme, onAuthenti
   const [isSubmitting, setIsSubmitting] = useState(false)
   const isAdmin = role === 'Encargado'
 
-  function switchMode(nextMode: 'login' | 'register') {
-    setNotice(null)
-    setShowPassword(false)
-    setMode(nextMode)
-   }
-
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const data = new FormData(event.currentTarget)
@@ -146,9 +140,6 @@ export function RoleLoginPage({ role, isLight, onBack, onToggleTheme, onAuthenti
 
 
         <div className="login-alternate-actions">
-          {isAdmin && (mode === 'login'
-            ? <button className="login-link" onClick={() => switchMode('register') }>Crear cuenta</button>
-            : <button className="login-link" onClick={() => switchMode('login') }>Ya tengo cuenta</button>) }
           <button className="login-back" onClick={onBack }>← Volver</button>
         </div>
       </div>

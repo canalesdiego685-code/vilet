@@ -1,12 +1,21 @@
 import bcrypt from 'bcryptjs'
-import { randomUUID } from 'node:crypto'
+import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { closeDatabasePool, createViletAccount, findUserForLogin, addInventoryEntry, addRawMaterial, deleteRawMaterial, readDatabaseStatus, readInventory, readProducts, readRawMaterials, updateRawMaterial, readNotices, createNotice, markNoticeRead, markAllNoticesRead, readClients, recordClientPurchase, updateClient, readClientHistory, readEmployees, addEmployee, deactivateEmployee, readAttendanceWeek, saveAttendance, readAdminAccounts, updateAdminAccount, deactivateAdminAccount, isActiveAccount, deleteNotice } from './db.js'
 import { closeMongoDB, connectMongoDB, createPerformanceSheet, deletePerformanceSheet, readMongoStatus, readPerformanceFile, readPerformanceSheets } from './mongo.js'
 
 const port = Number(process.env.API_PORT ?? 3001)
-const host = '127.0.0.1'
-const authSessions = new Map<string, { userId: number; role: string; expiresAt: number }>()
+const host = process.env.HOST ?? '127.0.0.1'
+const authSecret = process.env.AUTH_SECRET ?? randomBytes(32).toString('hex')
+const requestSessions = new WeakMap<IncomingMessage, AuthSession>()
+
+type AuthSession = { userId: number; role: string; expiresAt: number }
+
+function createAuthToken(session: AuthSession) {
+  const payload = Buffer.from(JSON.stringify(session)).toString('base64url')
+  const signature = createHmac('sha256', authSecret).update(payload).digest('base64url')
+  return payload + '.' + signature
+}
 
 class RequestError extends Error {
   readonly status: number
@@ -50,53 +59,61 @@ function field(body: Record<string, unknown>, name: string) {
 
 
 
-function sessionFromRequest(request: IncomingMessage) {
+function sessionFromRequest(request: IncomingMessage): AuthSession | null {
   const authorization = request.headers.authorization
   if (!authorization?.startsWith('Bearer ')) return null
   const token = authorization.slice(7).trim()
-  const session = authSessions.get(token)
-  if (!session) return null
-  if (session.expiresAt <= Date.now()) {
-    authSessions.delete(token)
+  const [payload, signature] = token.split('.')
+  if (!payload || !signature) return null
+
+  const expected = createHmac('sha256', authSecret).update(payload).digest()
+  const received = Buffer.from(signature, 'base64url')
+  if (received.length !== expected.length || !timingSafeEqual(received, expected)) return null
+
+  try {
+    const session = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as Partial<AuthSession>
+    if (typeof session.userId !== 'number' || typeof session.role !== 'string' || typeof session.expiresAt !== 'number') return null
+    if (session.expiresAt <= Date.now()) return null
+    return session as AuthSession
+  } catch {
     return null
   }
-  return { token, session }
 }
 
-async function requireAdmin(request: IncomingMessage, response: ServerResponse) {
-  const auth = sessionFromRequest(request)
-  if (!auth) {
-    sendJson(response, 401, { message: 'Inicia sesión como administrador para continuar.' })
+async function requireSession(request: IncomingMessage, response: ServerResponse) {
+  const cached = requestSessions.get(request)
+  if (cached) return cached
+  const session = sessionFromRequest(request)
+  if (!session) {
+    sendJson(response, 401, { message: 'Inicia sesión para continuar.' })
     return null
   }
-  if (auth.session.role !== 'Encargado') {
-    sendJson(response, 403, { message: 'Esta acción requiere una cuenta de administrador.' })
-    return null
-  }
-  if (!await isActiveAccount(auth.session.userId)) {
-    authSessions.delete(auth.token)
-    sendJson(response, 401, { message: 'La cuenta de administrador ya no está activa.' })
-    return null
-  }
-  return auth.session
-}
-
-async function requirePerformanceSession(request: IncomingMessage, response: ServerResponse, requiredRole: 'secretaria' | null = null) {
-  const auth = sessionFromRequest(request)
-  if (!auth) {
-    sendJson(response, 401, { message: 'Inicia sesión para consultar las hojas de rendimiento.' })
-    return null
-  }
-  if (requiredRole && auth.session.role !== requiredRole) {
-    sendJson(response, 403, { message: 'Esta acción requiere una cuenta de Secretaría.' })
-    return null
-  }
-  if (!await isActiveAccount(auth.session.userId)) {
-    authSessions.delete(auth.token)
+  if (!await isActiveAccount(session.userId)) {
     sendJson(response, 401, { message: 'La cuenta ya no está activa.' })
     return null
   }
-  return auth.session
+  requestSessions.set(request, session)
+  return session
+}
+
+async function requireAdmin(request: IncomingMessage, response: ServerResponse) {
+  const session = await requireSession(request, response)
+  if (!session) return null
+  if (session.role !== 'Encargado') {
+    sendJson(response, 403, { message: 'Esta acción requiere una cuenta de administrador.' })
+    return null
+  }
+  return session
+}
+
+async function requirePerformanceSession(request: IncomingMessage, response: ServerResponse, requiredRole: 'secretaria' | null = null) {
+  const session = await requireSession(request, response)
+  if (!session) return null
+  if (requiredRole && session.role !== requiredRole) {
+    sendJson(response, 403, { message: 'Esta acción requiere una cuenta de Secretaría.' })
+    return null
+  }
+  return session
 }
 
 function performanceMimeExtension(mimeType: string) {
@@ -139,8 +156,7 @@ async function handleLogin(request: IncomingMessage, response: ServerResponse) {
     }
 
     const name = [user.nombre, user.apellido_paterno, user.apellido_materno].filter(Boolean).join(' ')
-    const token = randomUUID()
-    authSessions.set(token, { userId: user.id_usuario, role: user.rol, expiresAt: Date.now() + 8 * 60 * 60 * 1000 })
+    const token = createAuthToken({ userId: user.id_usuario, role: user.rol, expiresAt: Date.now() + 8 * 60 * 60 * 1000 })
     sendJson(response, 200, {
       token,
       user: {
@@ -201,6 +217,9 @@ async function handleRegistration(request: IncomingMessage, response: ServerResp
 async function handleRequest(request: IncomingMessage, response: ServerResponse) {
   const requestUrl = new URL(request.url ?? '/', 'http://127.0.0.1')
   const pathname = requestUrl.pathname
+  const isPublicApi = (request.method === 'GET' && (pathname === '/api/status' || pathname === '/api/products'))
+    || (request.method === 'POST' && pathname === '/api/auth/login')
+  if (pathname.startsWith('/api/') && !isPublicApi && !await requireSession(request, response)) return
 
   const performanceFileMatch = pathname.match(/^\/api\/performance\/files\/([a-fA-F0-9]{24})$/)
   if (request.method === 'GET' && performanceFileMatch) {
@@ -239,7 +258,7 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
 
   if (request.method === 'POST' && pathname === '/api/performance') {
     if (!await requirePerformanceSession(request, response, 'secretaria')) return
-    const body = await readJsonBody(request, 7_500_000)
+    const body = await readJsonBody(request, 4_200_000)
     const area = field(body, 'area')
     const descripcion = field(body, 'descripcion')
     const fileName = field(body, 'fileName')
@@ -251,8 +270,8 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
       return
     }
     const fileData = Buffer.from(dataBase64, 'base64')
-    if (fileData.length < 1 || fileData.length > 5 * 1024 * 1024 || !hasValidFileSignature(fileData, mimeType)) {
-      sendJson(response, 400, { message: 'El archivo no se reconoce o supera el límite de 5 MB. Usa JPG, PNG, WEBP o PDF.' })
+    if (fileData.length < 1 || fileData.length > 3 * 1024 * 1024 || !hasValidFileSignature(fileData, mimeType)) {
+      sendJson(response, 400, { message: 'El archivo no se reconoce o supera el límite de 3 MB. Usa JPG, PNG, WEBP o PDF.' })
       return
     }
     try {
@@ -648,8 +667,6 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
     return
   }
   if (request.method === 'POST' && pathname === '/api/auth/logout') {
-    const auth = sessionFromRequest(request)
-    if (auth) authSessions.delete(auth.token)
     sendJson(response, 200, { message: 'Sesión cerrada.' })
     return
   }
@@ -659,6 +676,7 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
   }
 
   if (request.method === 'POST' && pathname === '/api/auth/register') {
+    if (!await requireAdmin(request, response)) return
     await handleRegistration(request, response)
     return
   }
@@ -671,8 +689,10 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
   sendJson(response, 404, { message: 'Ruta no encontrada.' })
 }
 
-const server = createServer((request, response) => {
-  void handleRequest(request, response).catch((error: unknown) => {
+export async function handler(request: IncomingMessage, response: ServerResponse) {
+  try {
+    await handleRequest(request, response)
+  } catch (error) {
     if (error instanceof RequestError) {
       sendJson(response, error.status, { message: error.message })
       return
@@ -680,17 +700,20 @@ const server = createServer((request, response) => {
     console.error('Error inesperado en la API:', error instanceof Error ? error.message : 'Error desconocido')
     if (!response.headersSent) sendJson(response, 500, { message: 'Error interno.' })
     else response.end()
-  })
-})
-
-void connectMongoDB()
-server.listen(port, host, () => console.log(`API de Vilet lista en http://${host}:${port}`))
-
-async function shutDown() {
-  server.close()
-  await Promise.all([closeDatabasePool(), closeMongoDB()])
+  }
 }
-process.once('SIGINT', () => void shutDown())
-process.once('SIGTERM', () => void shutDown())
+
+if (process.env.VERCEL !== '1') {
+  void connectMongoDB()
+  const server = createServer((request, response) => { void handler(request, response) })
+  server.listen(port, host, () => console.log(`API de Vilet lista en http://${host}:${port}`))
+
+  async function shutDown() {
+    server.close()
+    await Promise.all([closeDatabasePool(), closeMongoDB()])
+  }
+  process.once('SIGINT', () => void shutDown())
+  process.once('SIGTERM', () => void shutDown())
+}
 
 
