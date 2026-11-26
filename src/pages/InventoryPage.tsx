@@ -266,7 +266,7 @@ export function InventoryPage({ isLight, onBack, roleLabel = 'SECRETARÍA' }: Pr
               </label>
               <div className="inventory-form-row">
                 <label>Cantidad
-                  <input name="cantidad" type="number" min="0.01" max={movementMode === 'salida' && selectedItem ? selectedStock : undefined} step={unit === 'PZA' ? '1' : '0.01'} required placeholder="0.00" />
+                  <input name="cantidad" type="number" min={unit === 'PZA' ? '1' : '0.01'} max={movementMode === 'salida' && selectedItem ? selectedStock : undefined} step={unit === 'PZA' ? '1' : '0.01'} required placeholder="0.00" />
                 </label>
                 <label>Unidad
                   <select name="unidad" value={unit} onChange={(event) => setUnit(event.target.value as EntryUnit)}>
