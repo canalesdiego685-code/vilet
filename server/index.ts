@@ -1,8 +1,8 @@
 import bcrypt from 'bcryptjs'
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
-import { closeDatabasePool, createViletAccount, findUserForLogin, addInventoryEntry, addInventoryExit, addRawMaterial, deleteRawMaterial, readDatabaseStatus, readInventory, readInventoryMovements, readProducts, readRawMaterials, updateRawMaterial, readNotices, createNotice, markNoticeRead, markAllNoticesRead, readClients, recordClientPurchase, updateClient, readClientHistory, readEmployees, addEmployee, deactivateEmployee, readAttendanceWeek, saveAttendance, readAdminAccounts, updateAdminAccount, deactivateAdminAccount, isActiveAccount, deleteNotice } from './db.js'
-import { closeMongoDB, connectMongoDB, createPerformanceSheet, deletePerformanceSheet, readMongoStatus, readPerformanceFile, readPerformanceSheets } from './mongo.js'
+import { closeDatabasePool, createViletAccount, findUserForLogin, addInventoryEntry, addInventoryExit, addRawMaterial, deleteRawMaterial, readDatabaseStatus, readInventory, readInventoryMovements, readInventoryPresentationBalances, readProducts, readRawMaterials, updateRawMaterial, readNotices, createNotice, markNoticeRead, markAllNoticesRead, readClients, recordClientPurchase, updateClient, readClientHistory, readEmployees, addEmployee, deactivateEmployee, readAttendanceWeek, saveAttendance, readAdminAccounts, updateAdminAccount, deactivateAdminAccount, isActiveAccount, deleteNotice } from './db.js'
+import { closeMongoDB, connectMongoDB, createPerformanceSheet, deletePerformanceSheet, deleteProfilePhoto, readMongoStatus, readPerformanceFile, readPerformanceSheets, readProfilePhoto, saveProfilePhoto } from './mongo.js'
 
 const port = Number(process.env.API_PORT ?? 3001)
 const host = process.env.HOST ?? '127.0.0.1'
@@ -126,6 +126,18 @@ function performanceMimeExtension(mimeType: string) {
   return allowed[mimeType] ?? null
 }
 
+const maxProfilePhotoBytes = 1_500_000
+const maxProfilePhotoBodyBytes = 2_100_000
+const profilePhotoExtensions: Record<string, string[]> = {
+  'image/jpeg': ['.jpg', '.jpeg'],
+  'image/png': ['.png'],
+  'image/webp': ['.webp'],
+}
+
+function isProfilePhotoMimeType(mimeType: string): mimeType is 'image/jpeg' | 'image/png' | 'image/webp' {
+  return mimeType === 'image/jpeg' || mimeType === 'image/png' || mimeType === 'image/webp'
+}
+
 function hasValidFileSignature(buffer: Buffer, mimeType: string) {
   if (mimeType === 'image/jpeg') return buffer.length > 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff
   if (mimeType === 'image/png') return buffer.subarray(0, 8).equals(Buffer.from([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a]))
@@ -220,6 +232,79 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
   const isPublicApi = (request.method === 'GET' && (pathname === '/api/status' || pathname === '/api/products'))
     || (request.method === 'POST' && pathname === '/api/auth/login')
   if (pathname.startsWith('/api/') && !isPublicApi && !await requireSession(request, response)) return
+
+  if (request.method === 'GET' && pathname === '/api/profile/photo') {
+    const session = await requireSession(request, response)
+    if (!session) return
+    try {
+      const profile = await readProfilePhoto(session.userId)
+      sendJson(response, 200, profile ? {
+        photo: `data:${profile.mimeType};base64,${profile.data.toString('base64')}`,
+        mimeType: profile.mimeType,
+        updatedAt: profile.updatedAt.toISOString(),
+      } : { photo: null })
+    } catch (error) {
+      console.error('No fue posible leer la foto de perfil:', error instanceof Error ? error.name : 'Error desconocido')
+      sendJson(response, 503, { message: 'No se pudo consultar la foto de perfil en MongoDB Atlas.' })
+    }
+    return
+  }
+
+  if (request.method === 'POST' && pathname === '/api/profile/photo') {
+    const session = await requireSession(request, response)
+    if (!session) return
+    const body = await readJsonBody(request, maxProfilePhotoBodyBytes)
+    const fileName = field(body, 'fileName')
+    const mimeType = field(body, 'mimeType')
+    const dataBase64 = field(body, 'dataBase64')
+    if (!fileName || fileName.length > 255 || !isProfilePhotoMimeType(mimeType) || !dataBase64) {
+      sendJson(response, 400, { message: 'Selecciona una imagen JPG, PNG o WEBP con un nombre de archivo válido.' })
+      return
+    }
+    const extensions = profilePhotoExtensions[mimeType]
+    if (!extensions.some((extension) => fileName.toLowerCase().endsWith(extension))) {
+      sendJson(response, 400, { message: 'La extensión del archivo no coincide con el tipo de imagen.' })
+      return
+    }
+    if (dataBase64.length % 4 !== 0 || !/^[A-Za-z0-9+/]+={0,2}$/.test(dataBase64)) {
+      sendJson(response, 400, { message: 'Los datos de la imagen no son válidos.' })
+      return
+    }
+    const fileData = Buffer.from(dataBase64, 'base64')
+    if (fileData.toString('base64') !== dataBase64) {
+      sendJson(response, 400, { message: 'Los datos de la imagen no son válidos.' })
+      return
+    }
+    if (fileData.length > maxProfilePhotoBytes) {
+      sendJson(response, 400, { message: 'La foto de perfil no puede superar 1.5 MB.' })
+      return
+    }
+    if (!hasValidFileSignature(fileData, mimeType)) {
+      sendJson(response, 400, { message: 'El contenido no corresponde a una imagen JPG, PNG o WEBP válida.' })
+      return
+    }
+    try {
+      await saveProfilePhoto({ userId: session.userId, fileName, mimeType, data: fileData })
+      sendJson(response, 200, { message: 'Foto de perfil guardada en MongoDB Atlas.' })
+    } catch (error) {
+      console.error('No fue posible guardar la foto de perfil:', error instanceof Error ? error.name : 'Error desconocido')
+      sendJson(response, 503, { message: 'No se pudo guardar la foto de perfil en MongoDB Atlas.' })
+    }
+    return
+  }
+
+  if (request.method === 'DELETE' && pathname === '/api/profile/photo') {
+    const session = await requireSession(request, response)
+    if (!session) return
+    try {
+      await deleteProfilePhoto(session.userId)
+      sendJson(response, 200, { message: 'Foto de perfil eliminada.' })
+    } catch (error) {
+      console.error('No fue posible eliminar la foto de perfil:', error instanceof Error ? error.name : 'Error desconocido')
+      sendJson(response, 503, { message: 'No se pudo eliminar la foto de perfil de MongoDB Atlas.' })
+    }
+    return
+  }
 
   const performanceFileMatch = pathname.match(/^\/api\/performance\/files\/([a-fA-F0-9]{24})$/)
   if (request.method === 'GET' && performanceFileMatch) {
@@ -473,6 +558,7 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
     const idProducto = Number(body.id_producto)
     const cantidad = Number(body.cantidad)
     const unidad = body.unidad
+    const presentacion = field(body, 'presentacion')
     const observaciones = field(body, 'observaciones')
     if (!Number.isInteger(idProducto) || idProducto < 1 || !Number.isFinite(cantidad) || cantidad <= 0) {
       sendJson(response, 400, { message: 'Selecciona un producto y una cantidad mayor que cero.' })
@@ -480,6 +566,10 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
     }
     if (unidad !== 'KG' && unidad !== 'PZA') {
       sendJson(response, 400, { message: 'Selecciona kilogramos o piezas.' })
+      return
+    }
+    if (presentacion.length > 20) {
+      sendJson(response, 400, { message: 'La presentación no es válida.' })
       return
     }
     if (unidad === 'PZA' && !Number.isInteger(cantidad)) {
@@ -491,13 +581,13 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
       return
     }
     try {
-      const result = await addInventoryEntry(idProducto, cantidad, unidad, session.username, observaciones)
+      const result = await addInventoryEntry(idProducto, cantidad, unidad, presentacion, session.username, observaciones)
       if (result === 'product-not-found') {
         sendJson(response, 404, { message: 'No se encontró el producto seleccionado.' })
         return
       }
-      if (result === 'unit-mismatch') {
-        sendJson(response, 400, { message: 'La unidad no corresponde al producto seleccionado.' })
+      if (result === 'invalid-presentation') {
+        sendJson(response, 400, { message: 'Selecciona una presentación válida. Oaxaca y Panela se registran en piezas.' })
         return
       }
       sendJson(response, 201, { message: 'Entrada registrada y existencias actualizadas.' })
@@ -515,6 +605,7 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
     const idProducto = Number(body.id_producto)
     const cantidad = Number(body.cantidad)
     const unidad = body.unidad
+    const presentacion = field(body, 'presentacion')
     const motivo = field(body, 'motivo')
     const cliente = field(body, 'cliente')
     if (!Number.isInteger(idProducto) || idProducto < 1 || !Number.isFinite(cantidad) || cantidad <= 0) {
@@ -523,6 +614,10 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
     }
     if (unidad !== 'KG' && unidad !== 'PZA') {
       sendJson(response, 400, { message: 'Selecciona kilogramos o piezas.' })
+      return
+    }
+    if (presentacion.length > 20) {
+      sendJson(response, 400, { message: 'La presentación no es válida.' })
       return
     }
     if (unidad === 'PZA' && !Number.isInteger(cantidad)) {
@@ -534,13 +629,13 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
       return
     }
     try {
-      const result = await addInventoryExit(idProducto, cantidad, unidad, session.username, motivo, cliente)
+      const result = await addInventoryExit(idProducto, cantidad, unidad, presentacion, session.username, motivo, cliente)
       if (result === 'product-not-found') {
         sendJson(response, 404, { message: 'No se encontró el producto seleccionado.' })
         return
       }
-      if (result === 'unit-mismatch') {
-        sendJson(response, 400, { message: 'La unidad no corresponde al producto seleccionado.' })
+      if (result === 'invalid-presentation') {
+        sendJson(response, 400, { message: 'Selecciona una presentación válida. Oaxaca y Panela se registran en piezas.' })
         return
       }
       if (result === 'insufficient-stock') {
@@ -551,6 +646,16 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
     } catch (error) {
       console.error('No fue posible registrar la salida:', error instanceof Error ? error.message : 'Error desconocido')
       sendJson(response, 503, { message: 'No se pudo guardar la salida de inventario.' })
+    }
+    return
+  }
+
+  if (request.method === 'GET' && pathname === '/api/inventory/presentations') {
+    try {
+      sendJson(response, 200, { items: await readInventoryPresentationBalances() })
+    } catch (error) {
+      console.error('No fue posible leer las presentaciones:', error instanceof Error ? error.message : 'Error desconocido')
+      sendJson(response, 503, { message: 'No se pudo consultar el inventario por presentación.' })
     }
     return
   }

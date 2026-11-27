@@ -157,11 +157,13 @@ function createMovementsSheet(movements: InventoryMovement[]) {
   movements.forEach((movement, index) => {
     const rowNumber = index + 5
     const zebra = index % 2 === 1
+    const presentation = movement.presentacion?.trim() ?? ''
+    const unitLabel = (movement.unidad ?? presentation) + (presentation && !['KG', 'PZA'].includes(presentation.toUpperCase()) ? ' · ' + presentation : '')
     const values: Array<string | number> = [
       movement.fecha,
       movement.tipo_movimiento.toUpperCase(),
       movement.producto,
-      movement.unidad ?? movement.presentacion ?? '',
+      unitLabel,
       numberValue(movement.cantidad),
       movement.usuario ?? '',
       [movement.motivo, movement.cliente].filter(Boolean).join(' · '),

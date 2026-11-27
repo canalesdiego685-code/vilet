@@ -1,5 +1,14 @@
 import mongoose, { Schema, type Model, type Types } from 'mongoose'
 
+type ProfilePhotoRecord = {
+  usuario_id: number
+  mime_type: 'image/jpeg' | 'image/png' | 'image/webp'
+  contenido: Buffer
+  nombre_original: string
+  tamano: number
+  fecha_actualizacion: Date
+}
+
 type PerformanceFileRecord = {
   nombre_original: string
   mime_type: string
@@ -44,6 +53,23 @@ performanceSheetSchema.index({ estado: 1, fecha: -1 })
 
 const PerformanceSheetModel = (mongoose.models.ViletRendimiento as Model<PerformanceSheetRecord> | undefined)
   ?? mongoose.model<PerformanceSheetRecord>('ViletRendimiento', performanceSheetSchema)
+
+const profileCollectionName = process.env.MONGODB_PROFILE_COLLECTION ?? 'perfiles'
+
+const profilePhotoSchema = new Schema<ProfilePhotoRecord>({
+  usuario_id: { type: Number, required: true, unique: true },
+  mime_type: { type: String, required: true, enum: ['image/jpeg', 'image/png', 'image/webp'] },
+  contenido: { type: Buffer, required: true, select: false },
+  nombre_original: { type: String, required: true, maxlength: 255 },
+  tamano: { type: Number, required: true, min: 1 },
+  fecha_actualizacion: { type: Date, required: true, default: Date.now },
+}, {
+  collection: profileCollectionName,
+  versionKey: false,
+})
+
+const ProfilePhotoModel = (mongoose.models.ViletPerfil as Model<ProfilePhotoRecord> | undefined)
+  ?? mongoose.model<ProfilePhotoRecord>('ViletPerfil', profilePhotoSchema)
 
 export type MongoStatus = {
   connected: boolean
@@ -95,6 +121,52 @@ async function ensureMongoConnection() {
   if (mongoose.connection.readyState !== 1 && !await connectMongoDB()) {
     throw new Error('MongoDB Atlas no está disponible en este momento. Inténtalo de nuevo.')
   }
+}
+
+export async function readProfilePhoto(userId: number) {
+  await ensureMongoConnection()
+  const profile = await ProfilePhotoModel.findOne({ usuario_id: userId }).select('+contenido')
+  if (!profile) return null
+  return {
+    data: profile.contenido,
+    mimeType: profile.mime_type,
+    fileName: profile.nombre_original,
+    updatedAt: profile.fecha_actualizacion,
+  }
+}
+
+export async function saveProfilePhoto(input: {
+  userId: number
+  fileName: string
+  mimeType: 'image/jpeg' | 'image/png' | 'image/webp'
+  data: Buffer
+}) {
+  await ensureMongoConnection()
+  const profile = await ProfilePhotoModel.findOneAndUpdate(
+    { usuario_id: input.userId },
+    {
+      $set: {
+        mime_type: input.mimeType,
+        contenido: input.data,
+        nombre_original: input.fileName,
+        tamano: input.data.byteLength,
+        fecha_actualizacion: new Date(),
+      },
+    },
+    { upsert: true, new: true, runValidators: true },
+  )
+  return {
+    data: profile.contenido,
+    mimeType: profile.mime_type,
+    fileName: profile.nombre_original,
+    updatedAt: profile.fecha_actualizacion,
+  }
+}
+
+export async function deleteProfilePhoto(userId: number) {
+  await ensureMongoConnection()
+  const result = await ProfilePhotoModel.deleteOne({ usuario_id: userId })
+  return result.deletedCount > 0
 }
 
 export async function readMongoStatus(): Promise<MongoStatus> {

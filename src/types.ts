@@ -30,6 +30,12 @@ export type AuthenticatedUser = {
   role: UserRole
 }
 
+export type ProfilePhoto = {
+  photo: string | null
+  mimeType?: string
+  updatedAt?: string
+}
+
 export type AccountRegistration = {
   nombre: string
   apellidoPaterno: string
@@ -69,6 +75,14 @@ export type InventoryItem = {
   entradas_piezas: number | string | null
   salidas_piezas: number | string | null
   fecha_actualizacion: string | null
+}
+
+export type InventoryPresentationBalance = {
+  id_producto: number
+  presentacion: string
+  piezas: number | string
+  entradas_piezas: number | string
+  salidas_piezas: number | string
 }
 
 export type InventoryMovement = {

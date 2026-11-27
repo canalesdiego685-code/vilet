@@ -1,5 +1,6 @@
 import type { ResultSetHeader, RowDataPacket } from 'mysql2'
 import mysql from 'mysql2/promise'
+import { inventoryPresentationFamily } from '../src/inventoryPresentations.js'
 
 const pool = mysql.createPool({
   host: process.env.MYSQL_HOST ?? process.env.TIDB_HOST ?? 'localhost',
@@ -68,6 +69,21 @@ export async function readInventory() {
   return rows
 }
 
+export type InventoryPresentationBalanceRow = RowDataPacket & {
+  id_producto: number
+  presentacion: string
+  piezas: number | string
+  entradas_piezas: number | string
+  salidas_piezas: number | string
+}
+
+export async function readInventoryPresentationBalances() {
+  const [rows] = await pool.query<InventoryPresentationBalanceRow[]>(
+    'SELECT id_producto, presentacion, piezas, entradas_piezas, salidas_piezas FROM inventario_presentaciones ORDER BY id_producto, presentacion',
+  )
+  return rows
+}
+
 export type InventoryMovementRow = RowDataPacket & {
   id: number
   tipo_movimiento: 'entrada' | 'salida'
@@ -89,7 +105,11 @@ export async function readInventoryMovements() {
     FROM inventario_detalle
     UNION ALL
     SELECT 'salida' AS tipo_movimiento, id, producto, presentacion, cantidad,
-      CASE WHEN UPPER(presentacion) IN ('KG', 'PZA') THEN UPPER(presentacion) ELSE NULL END AS unidad,
+      CASE
+        WHEN UPPER(presentacion) IN ('KG', 'PZA') THEN UPPER(presentacion)
+        WHEN LOWER(producto) IN ('oaxaca', 'panela') THEN 'PZA'
+        ELSE NULL
+      END AS unidad,
       DATE_FORMAT(fecha, '%Y-%m-%d %H:%i:%s') AS fecha, usuario, motivo, cliente
     FROM salidas_detalle
     ORDER BY fecha DESC, id DESC
@@ -118,12 +138,12 @@ export async function closeDatabasePool() {
   await pool.end()
 }
 
-export async function addInventoryEntry(idProducto: number, cantidad: number, unidad: 'KG' | 'PZA', usuario: string, observaciones: string) {
+export async function addInventoryEntry(idProducto: number, cantidad: number, unidad: 'KG' | 'PZA', presentacion: string, usuario: string, observaciones: string) {
   const connection = await pool.getConnection()
   try {
     await connection.beginTransaction()
-    const [products] = await connection.execute<(RowDataPacket & { nombre: string; unidad: 'KG' | 'PZA' | 'AMBOS' })[]>(
-      'SELECT nombre, unidad FROM productos WHERE id_producto = ? LIMIT 1 FOR UPDATE',
+    const [products] = await connection.execute<(RowDataPacket & { nombre: string })[]>(
+      'SELECT nombre FROM productos WHERE id_producto = ? LIMIT 1 FOR UPDATE',
       [idProducto],
     )
     const product = products[0]
@@ -131,9 +151,12 @@ export async function addInventoryEntry(idProducto: number, cantidad: number, un
       await connection.rollback()
       return 'product-not-found' as const
     }
-    if (product.unidad !== 'AMBOS' && product.unidad !== unidad) {
+
+    const family = inventoryPresentationFamily(product.nombre)
+    const effectivePresentation = family ? presentacion.trim().toUpperCase() : unidad
+    if (family && (unidad !== 'PZA' || !family.presentations.some((item) => item.code === effectivePresentation))) {
       await connection.rollback()
-      return 'unit-mismatch' as const
+      return 'invalid-presentation' as const
     }
 
     const [existingRows] = await connection.execute<(RowDataPacket & { id_inventario: number })[]>(
@@ -162,9 +185,19 @@ export async function addInventoryEntry(idProducto: number, cantidad: number, un
         [idProducto, cantidad, cantidad],
       )
     }
+
+    if (family) {
+      await connection.execute(
+        `INSERT INTO inventario_presentaciones (id_producto, presentacion, piezas, entradas_piezas, salidas_piezas)
+         VALUES (?, ?, ?, ?, 0)
+         ON DUPLICATE KEY UPDATE piezas = piezas + VALUES(piezas), entradas_piezas = entradas_piezas + VALUES(entradas_piezas), fecha_actualizacion = NOW()`,
+        [idProducto, effectivePresentation, cantidad, cantidad],
+      )
+    }
+
     await connection.execute(
       'INSERT INTO inventario_detalle (producto, presentacion, cantidad, tipo, usuario, observaciones) VALUES (?, ?, ?, ?, ?, ?)',
-      [product.nombre, unidad, cantidad, unidad.toLowerCase(), usuario, observaciones],
+      [product.nombre, effectivePresentation, cantidad, unidad.toLowerCase(), usuario, observaciones],
     )
     await connection.commit()
     return 'saved' as const
@@ -176,12 +209,12 @@ export async function addInventoryEntry(idProducto: number, cantidad: number, un
   }
 }
 
-export async function addInventoryExit(idProducto: number, cantidad: number, unidad: 'KG' | 'PZA', usuario: string, motivo: string, cliente: string) {
+export async function addInventoryExit(idProducto: number, cantidad: number, unidad: 'KG' | 'PZA', presentacion: string, usuario: string, motivo: string, cliente: string) {
   const connection = await pool.getConnection()
   try {
     await connection.beginTransaction()
-    const [products] = await connection.execute<(RowDataPacket & { nombre: string; unidad: 'KG' | 'PZA' | 'AMBOS' })[]>(
-      'SELECT nombre, unidad FROM productos WHERE id_producto = ? LIMIT 1 FOR UPDATE',
+    const [products] = await connection.execute<(RowDataPacket & { nombre: string })[]>(
+      'SELECT nombre FROM productos WHERE id_producto = ? LIMIT 1 FOR UPDATE',
       [idProducto],
     )
     const product = products[0]
@@ -189,9 +222,13 @@ export async function addInventoryExit(idProducto: number, cantidad: number, uni
       await connection.rollback()
       return 'product-not-found' as const
     }
-    if (product.unidad !== 'AMBOS' && product.unidad !== unidad) {
+
+    const family = inventoryPresentationFamily(product.nombre)
+    const effectivePresentation = family ? presentacion.trim().toUpperCase() : unidad
+    const unassigned = Boolean(family && effectivePresentation === 'S/A')
+    if (family && (unidad !== 'PZA' || (!unassigned && !family.presentations.some((item) => item.code === effectivePresentation)))) {
       await connection.rollback()
-      return 'unit-mismatch' as const
+      return 'invalid-presentation' as const
     }
 
     const [inventoryRows] = await connection.execute<(RowDataPacket & {
@@ -209,6 +246,27 @@ export async function addInventoryExit(idProducto: number, cantidad: number, uni
       return 'insufficient-stock' as const
     }
 
+    if (family && !unassigned) {
+      const [presentationRows] = await connection.execute<(RowDataPacket & { piezas: number | string })[]>(
+        'SELECT piezas FROM inventario_presentaciones WHERE id_producto = ? AND presentacion = ? LIMIT 1 FOR UPDATE',
+        [idProducto, effectivePresentation],
+      )
+      if (!presentationRows[0] || Number(presentationRows[0].piezas) < cantidad) {
+        await connection.rollback()
+        return 'insufficient-stock' as const
+      }
+    } else if (unassigned) {
+      const [presentationRows] = await connection.execute<(RowDataPacket & { piezas: number | string })[]>(
+        'SELECT piezas FROM inventario_presentaciones WHERE id_producto = ? FOR UPDATE',
+        [idProducto],
+      )
+      const assigned = presentationRows.reduce((sum, row) => sum + Number(row.piezas), 0)
+      if (stock - assigned < cantidad) {
+        await connection.rollback()
+        return 'insufficient-stock' as const
+      }
+    }
+
     if (unidad === 'KG') {
       await connection.execute(
         'UPDATE inventario SET stock_kg = stock_kg - ?, salidas_kg = COALESCE(salidas_kg, 0) + ?, fecha_actualizacion = NOW() WHERE id_inventario = ?',
@@ -220,9 +278,17 @@ export async function addInventoryExit(idProducto: number, cantidad: number, uni
         [cantidad, cantidad, inventory.id_inventario],
       )
     }
+
+    if (family && !unassigned) {
+      await connection.execute(
+        'UPDATE inventario_presentaciones SET piezas = piezas - ?, salidas_piezas = salidas_piezas + ?, fecha_actualizacion = NOW() WHERE id_producto = ? AND presentacion = ?',
+        [cantidad, cantidad, idProducto, effectivePresentation],
+      )
+    }
+
     await connection.execute(
       'INSERT INTO salidas_detalle (producto, presentacion, cantidad, tipo, fecha, usuario, motivo, cliente) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?)',
-      [product.nombre, unidad, cantidad, 'SALIDA', usuario, motivo, cliente],
+      [product.nombre, effectivePresentation, cantidad, 'SALIDA', usuario, motivo, cliente],
     )
     await connection.execute(
       'INSERT INTO salidas (producto, cantidad, destino, fecha, responsable) VALUES (?, ?, ?, CURRENT_DATE, ?)',
