@@ -75,26 +75,35 @@ async function requestJson<T>(path: string, options: RequestInit = {}): Promise<
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const controller = new AbortController()
     const timeout = window.setTimeout(() => controller.abort(), 55_000)
+    let response: Response | null = null
     try {
-      const response = await fetch(path, { ...options, signal: controller.signal, headers: authorizedHeaders(options.headers) })
-      if (canRetry && (response.status === 429 || response.status === 502 || response.status === 503 || response.status === 504) && attempt < 2) {
-        await response.text().catch(() => undefined)
-        lastError = new Error('El servidor está respondiendo temporalmente con lentitud.')
-      } else {
-        if (response.status === 401 && path !== '/api/auth/login') {
-          const role = getSavedUser()?.role ?? null
-          clearAuthSession()
-          window.dispatchEvent(new CustomEvent('vilet-session-expired', { detail: role }))
-        }
-        return await readJsonResponse<T>(response)
-      }
+      response = await fetch(path, { ...options, signal: controller.signal, headers: authorizedHeaders(options.headers) })
     } catch (error) {
       lastError = error
       if (!canRetry || attempt === 2) break
     } finally {
       window.clearTimeout(timeout)
     }
-    await new Promise((resolve) => window.setTimeout(resolve, attempt === 0 ? 500 : 1200))
+
+    if (!response) {
+      await new Promise((resolve) => window.setTimeout(resolve, attempt === 0 ? 500 : 1200))
+      continue
+    }
+
+    if (canRetry && (response.status === 429 || response.status === 502 || response.status === 503 || response.status === 504)) {
+      await response.text().catch(() => undefined)
+      lastError = new Error('El servidor está respondiendo temporalmente con lentitud.')
+      if (attempt === 2) break
+      await new Promise((resolve) => window.setTimeout(resolve, attempt === 0 ? 500 : 1200))
+      continue
+    }
+
+    if (response.status === 401 && path !== '/api/auth/login') {
+      const role = getSavedUser()?.role ?? null
+      clearAuthSession()
+      window.dispatchEvent(new CustomEvent('vilet-session-expired', { detail: role }))
+    }
+    return readJsonResponse<T>(response)
   }
 
   if (lastError instanceof Error && lastError.message === 'El servidor está respondiendo temporalmente con lentitud.') throw lastError
