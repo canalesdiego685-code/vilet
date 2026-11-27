@@ -2288,39 +2288,28 @@
 .profile-photo-toast { position: fixed; right: 20px; bottom: 20px; z-index: 90; max-width: min(390px,calc(100vw - 40px)); margin: 0; padding: 12px 16px; border: 1px solid rgba(232,202,105,.32); border-radius: 11px; background: rgba(14,32,56,.97); color: #e7eef8; box-shadow: 0 14px 38px rgba(0,0,0,.3); text-align: left; }
 .theme-light .profile-photo-toast,.admin-experience.theme-light .profile-photo-toast { background: rgba(255,255,255,.98); color: #40536d; border-color: rgba(38,51,72,.15); }
 
-.vilet-app.secretary-experience:not(.theme-light) { background: linear-gradient(115deg,rgba(11,35,58,.84),rgba(24,73,112,.78) 48%,rgba(12,45,73,.86)),url("/vilet-background.png") center / cover fixed no-repeat; background-attachment:scroll,fixed; }
-.secretary-login-card { border-color: rgba(137,205,250,.58); box-shadow: 0 24px 80px rgba(0,20,42,.4),inset 0 1px 0 rgba(255,255,255,.2); }
-.login-input { background: rgba(9,42,72,.82); border-color: rgba(151,205,244,.22); }
-.login-input:focus { border-color: #8dccf5; box-shadow: 0 0 0 3px rgba(110,190,240,.16); }
-.inventory-toolbar { background: rgba(20,57,91,.91); border-color: rgba(137,197,242,.22); }
-.inventory-family-card,.inventory-product-card,.inventory-history-card,.inventory-count { background: rgba(16,48,78,.93); border-color: rgba(137,197,242,.16); }
-.inventory-family-table th { background: rgba(31,83,126,.96); }
-.inventory-summary-card { background: linear-gradient(135deg,rgba(35,92,137,.94),rgba(17,49,81,.94)); }
-.inventory-modal { background: linear-gradient(145deg,#205b8a,#123a60); }
-.inventory-refresh,.inventory-add { background: #3987c6; }
-.inventory-back,.inventory-history-link,.inventory-history-filters button { background: #3c82bd; }
-.inventory-product-actions button { background: rgba(60,130,189,.38); color: #e5f4ff; }
-.inventory-product-actions button:hover { background: rgba(78,157,219,.58); }
-.secretary-toolbar { background: rgba(20,57,91,.9); border-color: rgba(137,197,242,.2); }
-.secretary-module-card { border-color: rgba(137,197,242,.18); }
-.admin-dashboard-toolbar { background: rgba(20,57,91,.94); border-color: rgba(137,197,242,.2); }
-.admin-dashboard-card { background: linear-gradient(150deg,rgba(28,73,113,.98),rgba(18,48,79,.98)); border-color: rgba(137,197,242,.18); }
-.admin-dashboard-card:hover { background: linear-gradient(150deg,#245f91,#173d63); }
-.admin-dashboard-brand>span { color: #b5e2ff; }
+.vilet-app.secretary-experience:not(.theme-light) { background: linear-gradient(115deg,rgba(42,96,135,.76),rgba(67,133,173,.64) 48%,rgba(35,88,127,.78)),url("/vilet-background.png") center / cover fixed no-repeat; background-attachment:scroll,fixed; }
+.secretary-login-card { border-color: rgba(168,219,255,.64); box-shadow: 0 24px 80px rgba(0,20,42,.4),inset 0 1px 0 rgba(255,255,255,.2); }
+.login-input { background: rgba(28,89,131,.88); border-color: rgba(172,216,249,.28); }
+.login-input:focus { border-color: #b4e1ff; box-shadow: 0 0 0 3px rgba(139,204,246,.2); }
+.inventory-toolbar { background: linear-gradient(115deg,rgba(51,121,166,.97),rgba(39,104,150,.97)); border-color: rgba(181,220,255,.28); }
+.inventory-family-card,.inventory-product-card,.inventory-history-card,.inventory-count { background: rgba(38,91,128,.98); border-color: rgba(190,225,255,.24); }
+.inventory-family-table th { background: rgba(59,127,174,.99); }
+.inventory-summary-card { background: linear-gradient(135deg,rgba(62,137,185,.98),rgba(34,88,132,.98)); }
+.inventory-modal { background: linear-gradient(145deg,#3d89b8,#2a6593); }
+.inventory-refresh,.inventory-add { background: #3d88ba; }
+.inventory-back,.inventory-history-link,.inventory-history-filters button { background: #397fae; }
+.inventory-product-actions button { background: rgba(76,147,199,.5); color: #eff8ff; }
+.inventory-product-actions button:hover { background: rgba(96,169,219,.66); }
+.secretary-toolbar { background: linear-gradient(100deg,rgba(51,121,166,.95),rgba(39,104,150,.95)); border-color: rgba(181,220,255,.26); }
+.secretary-module-card { background: linear-gradient(145deg,rgba(43,106,153,.98),rgba(31,81,119,.98)); border-color: rgba(190,225,255,.23); }
+.secretary-module-card:hover { background: linear-gradient(145deg,rgba(55,126,176,.98),rgba(37,93,137,.98)); }
+.admin-dashboard-toolbar { background: linear-gradient(105deg,rgba(51,121,166,.97),rgba(39,104,150,.97)); border-color: rgba(181,220,255,.26); }
+.admin-dashboard-card { background: linear-gradient(150deg,rgba(51,119,165,.98),rgba(30,79,119,.98)); border-color: rgba(190,225,255,.23); }
+.admin-dashboard-card:hover { background: linear-gradient(150deg,#3d88b8,#2c648f); }
+.admin-dashboard-welcome { background: linear-gradient(110deg,rgba(44,100,142,.97),rgba(35,78,115,.97) 78%,rgba(49,105,146,.98)); }
+.admin-dashboard-brand>span { color: #d0ebff; }
 
 .inventory-warning { margin: 0 0 14px; padding: 11px 14px; border: 1px solid rgba(245,202,91,.32); border-radius: 10px; background: rgba(116,78,20,.28); color: #ffe4a3; font-size: 12px; text-align: center; }
 .inventory-screen-light .inventory-warning { background: rgba(255,244,205,.94); border-color: rgba(167,126,30,.3); color: #6f5312; }
-.vilet-app.secretary-experience:not(.theme-light) { background: linear-gradient(115deg,rgba(24,67,103,.8),rgba(40,104,151,.72) 48%,rgba(22,70,108,.82)),url("/vilet-background.png") center / cover fixed no-repeat; background-attachment:scroll,fixed; }
-.inventory-toolbar { background: linear-gradient(115deg,rgba(33,91,137,.96),rgba(28,78,122,.95)); }
-.inventory-family-card,.inventory-product-card,.inventory-history-card,.inventory-count { background: rgba(24,67,103,.95); border-color: rgba(158,211,250,.19); }
-.inventory-family-table th { background: rgba(42,104,155,.98); }
-.inventory-summary-card { background: linear-gradient(135deg,rgba(47,113,165,.96),rgba(25,71,112,.96)); }
-.inventory-modal { background: linear-gradient(145deg,#2b76ad,#1a4d79); }
-.secretary-toolbar { background: linear-gradient(100deg,rgba(33,91,137,.94),rgba(28,78,122,.92)); }
-.secretary-module-card { background: linear-gradient(145deg,rgba(30,81,126,.97),rgba(23,63,101,.95)); }
-.secretary-module-card:hover { background: linear-gradient(145deg,rgba(40,103,156,.98),rgba(29,76,120,.97)); }
-.admin-dashboard-toolbar { background: linear-gradient(105deg,rgba(33,91,137,.96),rgba(28,78,122,.95)); }
-.admin-dashboard-card { background: linear-gradient(150deg,rgba(38,99,151,.98),rgba(25,68,110,.98)); }
-.admin-dashboard-card:hover { background: linear-gradient(150deg,#327fb6,#205c8e); }
-.admin-dashboard-welcome { background: linear-gradient(110deg,rgba(35,79,121,.97),rgba(28,65,103,.95) 78%,rgba(37,82,128,.96)); }
 @media print { .inventory-warning { display: none !important; } }
