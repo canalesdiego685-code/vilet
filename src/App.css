@@ -2313,3 +2313,276 @@
 .inventory-warning { margin: 0 0 14px; padding: 11px 14px; border: 1px solid rgba(245,202,91,.32); border-radius: 10px; background: rgba(116,78,20,.28); color: #ffe4a3; font-size: 12px; text-align: center; }
 .inventory-screen-light .inventory-warning { background: rgba(255,244,205,.94); border-color: rgba(167,126,30,.3); color: #6f5312; }
 @media print { .inventory-warning { display: none !important; } }
+
+/* Paleta clara de quesería: azul hielo, crema y dorado suave */
+@media screen {
+  .vilet-app {
+    --ink: #23445f;
+    --muted: #5c7488;
+    --quiet: #7b90a2;
+    --night: #f8fbfe;
+    --navy: #e6f2fa;
+    --blue: #d9ecf8;
+    --gold: #f3c34d;
+    --gold-deep: #a97616;
+    --line: rgba(68,129,166,.22);
+    color: var(--ink);
+    background:
+      linear-gradient(115deg, rgba(222,239,250,.84), rgba(236,246,252,.76) 48%, rgba(250,245,229,.88)),
+      url("/vilet-background.png") center / cover fixed no-repeat;
+    background-attachment: scroll, fixed;
+  }
+  .vilet-app.theme-light,
+  .vilet-app.secretary-experience,
+  .vilet-app.admin-experience {
+    background:
+      linear-gradient(115deg, rgba(222,239,250,.86), rgba(232,244,252,.78) 48%, rgba(251,247,232,.9)),
+      url("/vilet-background.png") center / cover fixed no-repeat;
+    background-attachment: scroll, fixed;
+  }
+  .vilet-app::before { opacity: .08; }
+  .site-atmosphere > span:nth-child(1) { background: #9fd3ef; opacity: .2; }
+  .site-atmosphere > span:nth-child(2) { background: #f1d58a; opacity: .16; }
+  .site-atmosphere > span:nth-child(3) { background: #8fc9b2; opacity: .16; }
+  .site-header, .site-footer { border-color: rgba(83,142,180,.2); }
+  .brand-lockup, .brand-word { color: #9a6b12; }
+  .nav-link, .connection-pill, .site-footer, .footer-links button { color: #5c7488; }
+  .nav-link:hover, .nav-link-active { color: #245c82; }
+  .theme-toggle { background: rgba(255,255,255,.78); border-color: rgba(83,142,180,.24); color: #a97616; }
+  .theme-toggle:hover { background: #fff7df; }
+  .home-card {
+    border-color: rgba(212,169,62,.62);
+    background: linear-gradient(145deg, rgba(252,254,255,.98), rgba(223,240,251,.97) 62%, rgba(255,249,229,.98));
+    box-shadow: 0 24px 70px rgba(45,91,125,.2), inset 0 1px 0 rgba(255,255,255,.9);
+  }
+  .home-card::before { border-color: rgba(83,142,180,.13); }
+  .home-overline, .home-description, .home-caption { color: #557187; }
+  .home-card h1 { color: #a97616; text-shadow: 0 5px 20px rgba(214,169,65,.15); }
+  .catalog-summary { background: rgba(255,250,234,.9); border-color: rgba(212,169,62,.25); color: #87610e; }
+  .role-card {
+    border-color: rgba(83,142,180,.2);
+    background: linear-gradient(145deg, rgba(255,255,255,.96), rgba(237,247,253,.94));
+    color: #23445f;
+    box-shadow: 0 10px 25px rgba(45,91,125,.1);
+  }
+  .role-card:hover { border-color: rgba(212,169,62,.52); background: linear-gradient(145deg,#fff,#fff8e4); box-shadow: 0 14px 30px rgba(45,91,125,.16); }
+  .role-subtitle { color: #627d91; }
+  .home-discover-links button, .gold-link { color: #96680f; }
+  .home-caption span { background: rgba(169,118,22,.4); }
+  .section-kicker, .inner-page > h1 em { color: #a97616; }
+  .section-lead { color: #5c7488; }
+  .about-story-card, .value-card, .product-card {
+    border-color: rgba(83,142,180,.2);
+    background: linear-gradient(145deg, rgba(255,255,255,.96), rgba(237,247,253,.93));
+    box-shadow: 0 14px 38px rgba(45,91,125,.12);
+  }
+  .value-card-gold { background: linear-gradient(135deg, rgba(255,249,229,.97), rgba(255,255,255,.94)); }
+  .value-card-blue { background: linear-gradient(135deg, rgba(230,244,253,.97), rgba(255,255,255,.94)); }
+  .about-story-card p, .value-card p, .product-card p, .story-number span, .catalog-heading > span, .catalog-heading small { color: #5c7488; }
+  .product-card:hover { border-color: rgba(212,169,62,.48); background: linear-gradient(145deg,#fff,#fff8e6); }
+  .product-art { background: linear-gradient(145deg, rgba(243,211,111,.3), rgba(218,239,250,.7)); }
+  .product-art-1 { background: linear-gradient(145deg, rgba(235,225,193,.45), rgba(230,243,251,.8)); }
+  .product-art-2 { background: linear-gradient(145deg, rgba(224,190,112,.3), rgba(230,243,251,.8)); }
+  .product-art-3 { background: linear-gradient(145deg, rgba(197,215,220,.4), rgba(230,243,251,.8)); }
+  .product-kicker { color: #98711d; }
+  .catalog-heading { border-color: rgba(83,142,180,.22); }
+  .catalog-message { background: rgba(255,255,255,.9); border-color: rgba(83,142,180,.22); color: #5c7488; }
+  .role-dialog {
+    border-color: rgba(212,169,62,.5);
+    background: linear-gradient(145deg,#f9fcff,#e5f2fa);
+    box-shadow: 0 22px 60px rgba(45,91,125,.24);
+  }
+  .dialog-close, .role-dialog p { color: #5c7488; }
+  .dialog-kicker { color: #a97616; }
+  .role-dialog h2 { color: #23445f; }
+
+  .secretary-login-card {
+    border-color: rgba(212,169,62,.62);
+    background: linear-gradient(145deg, rgba(252,254,255,.98), rgba(223,240,251,.97) 64%, rgba(255,249,229,.98));
+    box-shadow: 0 24px 70px rgba(45,91,125,.22), inset 0 1px 0 rgba(255,255,255,.9);
+  }
+  .secretary-login-card::before { border-color: rgba(83,142,180,.13); }
+  .secretary-login-kicker, .secretary-login-description, .login-field-label { color: #4f6c82; }
+  .secretary-login-card h1 { color: #a97616; text-shadow: none; }
+  .login-theme-toggle { background: rgba(255,255,255,.84); border-color: rgba(83,142,180,.24); color: #a97616; }
+  .login-input { background: rgba(255,255,255,.94); border-color: rgba(83,142,180,.28); color: #23445f; }
+  .login-input::placeholder { color: #8499aa; }
+  .login-input:focus { border-color: #d2a333; box-shadow: 0 0 0 3px rgba(210,163,51,.14); }
+  .password-visibility { color: #627d91; }
+  .login-notice { background: rgba(255,249,226,.92); border-color: rgba(212,169,62,.28); color: #7d5b12; }
+  .login-notice-success { background: rgba(235,250,241,.94); border-color: rgba(58,155,104,.28); color: #256c47; }
+  .login-back, .login-link { color: #8b6414; }
+
+  .secretary-toolbar, .admin-dashboard-toolbar, .admin-subpage-toolbar,
+  .inventory-toolbar, .raw-material-toolbar, .notice-toolbar, .clients-toolbar,
+  .admin-home-toolbar, .performance-toolbar, .attendance-toolbar {
+    border-color: rgba(83,142,180,.22);
+    background: linear-gradient(110deg, rgba(252,254,255,.97), rgba(226,241,251,.96));
+    box-shadow: 0 12px 30px rgba(45,91,125,.12);
+  }
+  .secretary-toolbar {
+    background: linear-gradient(rgba(255,255,255,.78),rgba(255,255,255,.78)), url("/vilet-background.png") center 50% / cover no-repeat;
+  }
+  .secretary-dashboard-brand, .admin-dashboard-brand>span, .admin-home-brand { color: #2b6c96; }
+  .dashboard-icon-button, .dashboard-theme-button, .admin-dashboard-theme { background: rgba(255,255,255,.9); border-color: rgba(83,142,180,.22); color: #a97616; }
+  .dashboard-user, .admin-dashboard-user { color: #36566e; }
+  .dashboard-user svg { color: #5c7488; }
+  .secretary-welcome-banner, .admin-dashboard-welcome, .admin-home-welcome {
+    border-color: rgba(212,169,62,.26);
+    background: linear-gradient(110deg, rgba(255,253,245,.97), rgba(226,241,251,.97) 72%, rgba(240,248,253,.97));
+    box-shadow: 0 14px 34px rgba(45,91,125,.13);
+  }
+  .secretary-welcome-banner h1, .admin-dashboard-welcome h1, .admin-home-welcome h1 { color: #23445f; }
+  .secretary-welcome-banner p, .admin-dashboard-welcome p, .admin-home-welcome p { color: #5c7488; }
+  .welcome-glow { background: rgba(243,195,77,.24); }
+  .secretary-module-card, .admin-dashboard-card {
+    border-color: rgba(83,142,180,.22);
+    background: linear-gradient(145deg, rgba(255,255,255,.98), rgba(230,243,252,.96));
+    color: #23445f;
+    box-shadow: 0 13px 30px rgba(45,91,125,.12);
+  }
+  .secretary-module-card:nth-child(2), .admin-dashboard-card:nth-child(2) { background: linear-gradient(145deg,rgba(250,255,251,.98),rgba(226,245,234,.96)); }
+  .secretary-module-card:nth-child(3), .admin-dashboard-card:nth-child(3) { background: linear-gradient(145deg,rgba(255,253,246,.98),rgba(252,241,213,.96)); }
+  .secretary-module-card:nth-child(4), .admin-dashboard-card:nth-child(4) { background: linear-gradient(145deg,rgba(252,251,255,.98),rgba(237,230,249,.96)); }
+  .secretary-module-card:hover, .admin-dashboard-card:hover { border-color: rgba(212,169,62,.5); background: linear-gradient(145deg,#fff,#fff8e4); }
+  .secretary-module-card > span:last-child, .admin-dashboard-card small { color: #5c7488; }
+  .module-dialog, .admin-access-card {
+    border-color: rgba(212,169,62,.45);
+    background: linear-gradient(145deg,#f9fcff,#e4f1fa);
+    box-shadow: 0 22px 60px rgba(45,91,125,.24);
+  }
+  .module-dialog p, .module-dialog-close, .admin-access-card > p:not(.secretary-login-kicker) { color: #5c7488; }
+  .module-dialog h2, .admin-access-card h1 { color: #23445f; }
+
+  .inventory-screen, .raw-material-screen, .notice-screen, .clients-screen,
+  .admin-home-screen, .performance-screen, .attendance-screen,
+  .admin-dashboard-screen, .admin-users-screen { color: #23445f; }
+  .inventory-heading-brand > div > span, .raw-material-brand > div > span,
+  .notice-kicker, .clients-kicker, .performance-kicker, .attendance-kicker,
+  .admin-subpage-toolbar > div > div > span { color: #3b7ca5; }
+  .inventory-heading-brand h1, .inventory-heading-brand p, .raw-material-brand h1,
+  .raw-material-brand p, .notice-toolbar h1, .notice-toolbar p, .clients-toolbar h1,
+  .performance-toolbar h1, .attendance-toolbar h1, .admin-subpage-toolbar h1 { color: #23445f; }
+  .inventory-back, .inventory-history-link, .inventory-history-filters button { background: #367fad; }
+  .inventory-refresh, .inventory-add { background: #2f7eaa; }
+  .inventory-error, .inventory-message { background: rgba(255,255,255,.94); border-color: rgba(83,142,180,.24); color: #4f6c82; }
+  .inventory-error { background: rgba(255,245,243,.96); border-color: rgba(200,91,83,.28); color: #9a433d; }
+  .inventory-family-card, .inventory-product-card, .inventory-history-card, .inventory-count {
+    border-color: rgba(83,142,180,.22);
+    background: rgba(252,254,255,.97);
+    box-shadow: 0 10px 25px rgba(45,91,125,.1);
+  }
+  .inventory-family-table th { background: #dcecf8; color: #315f7e; }
+  .inventory-family-table td { border-color: rgba(83,142,180,.14); color: #36566e; }
+  .inventory-family-empty, .inventory-family-unassigned { color: #627d91; border-color: rgba(83,142,180,.14); }
+  .inventory-family-total { color: #9a6b12 !important; }
+  .inventory-products-heading > div > span { color: #a97616; }
+  .inventory-products-heading h2, .inventory-product-card h3 { color: #23445f; }
+  .inventory-count { color: #4f6c82; }
+  .inventory-product-stats strong { color: #23815a; }
+  .inventory-product-stats span, .inventory-product-card small { color: #627d91; }
+  .inventory-product-actions button { background: #e2f0fa; border-color: rgba(83,142,180,.24); color: #2b658c; }
+  .inventory-product-actions button:hover { background: #cfe6f5; }
+  .inventory-footnote { color: #5c7488; }
+  .inventory-summary-card { border-color: rgba(83,142,180,.2); background: linear-gradient(135deg,#f7fbff,#e2f0fa); box-shadow: 0 8px 20px rgba(45,91,125,.1); }
+  .inventory-summary-card > span, .inventory-summary-card small { color: #5c7488; }
+  .inventory-summary-card strong { color: #2d6d92; }
+  .inventory-history-filters { background: rgba(252,254,255,.96); border-color: rgba(83,142,180,.22); }
+  .inventory-history-filters label { color: #4f6c82; }
+  .inventory-history-filters input, .inventory-history-filters select { background: #fff; border-color: rgba(83,142,180,.25); color: #23445f; }
+  .inventory-history-table th { color: #5c7488; }
+  .inventory-history-table td { border-color: rgba(83,142,180,.14); color: #36566e; }
+  .inventory-history-empty { color: #627d91; }
+  .inventory-stock-hint { background: #e8f3fb; color: #4f6c82; }
+  .inventory-stock-hint strong { color: #23445f; }
+  .inventory-notice { background: rgba(235,250,241,.96); border-color: rgba(58,155,104,.28); color: #256c47; }
+  .inventory-warning { background: rgba(255,249,226,.96); border-color: rgba(212,169,62,.3); color: #7d5b12; }
+  .inventory-modal {
+    border-color: rgba(212,169,62,.48);
+    background: linear-gradient(145deg,#f9fcff,#e2f0fa);
+    color: #23445f;
+    box-shadow: 0 25px 70px rgba(45,91,125,.25);
+  }
+  .inventory-modal-close, .inventory-modal > p, .inventory-add-form label { color: #4f6c82; }
+  .inventory-add-form input, .inventory-add-form select { background: #fff; border-color: rgba(83,142,180,.26); color: #23445f; }
+  .inventory-cancel { background: #edf4f9; border-color: rgba(83,142,180,.22); color: #4f6c82; }
+  .inventory-form-error { color: #a34842; }
+
+  .raw-material-welcome { border-color: rgba(212,169,62,.25); background: linear-gradient(115deg,rgba(255,253,245,.97),rgba(226,241,251,.97)); box-shadow: 0 16px 36px rgba(45,91,125,.13); }
+  .raw-material-welcome h2, .raw-material-form-heading h2, .raw-material-table-heading h2 { color: #23445f; }
+  .raw-material-welcome p, .raw-material-form-hint, .raw-material-table-heading p { color: #5c7488; }
+  .raw-material-form-card, .raw-material-table-card, .raw-material-stats article,
+  .notice-overview, .notice-card, .notice-empty, .admin-publish-card, .admin-recent-notices,
+  .clients-register-card, .clients-list-card, .performance-upload-card, .performance-table-card,
+  .attendance-week-filter, .attendance-add-form, .attendance-metric, .attendance-table-heading,
+  .attendance-summary span, .performance-readonly-note, .admin-users-table-card {
+    border-color: rgba(83,142,180,.2);
+    background: rgba(252,254,255,.97);
+    box-shadow: 0 10px 26px rgba(45,91,125,.1);
+  }
+  .raw-material-form-fields label, .raw-material-modal form label, .admin-publish-card label,
+  .clients-register-card label, .clients-modal form label, .performance-upload-card label,
+  .admin-user-form-grid label { color: #4f6c82; }
+  .raw-material-form-fields input, .raw-material-modal input, .raw-material-search,
+  .admin-publish-card input, .admin-publish-card textarea, .clients-register-card input,
+  .clients-modal input, .clients-list-tools label, .performance-upload-card select,
+  .performance-upload-card input:not([type=file]), .performance-file-label,
+  .attendance-week-filter input, .attendance-add-form > input, .admin-user-search input,
+  .admin-user-form-grid input, .admin-user-form-grid select { background: #fff; border-color: rgba(83,142,180,.24); color: #23445f; }
+  .raw-material-stats small, .raw-material-stats article div > span, .raw-material-date,
+  .raw-material-id, .raw-material-table-footer, .notice-message, .notice-date,
+  .admin-publish-card > p, .admin-recent-notices article p, .admin-recent-notices article span,
+  .clients-register-card p, .clients-list-heading p, .clients-table-footer,
+  .performance-upload-hint, .attendance-week-filter, .attendance-legend,
+  .attendance-metric > span, .attendance-metric > small, .attendance-table-heading p,
+  .attendance-summary span, .performance-readonly-note, .admin-user-search { color: #5c7488; }
+  .raw-material-table thead { background: linear-gradient(90deg,#4a91bc,#3b7eaa); }
+  .raw-material-table td, .clients-table td, .performance-table td { border-color: rgba(83,142,180,.14); color: #36566e; }
+  .raw-material-name, .notice-card h2, .admin-publish-card h2, .admin-recent-notices h2,
+  .clients-register-card h2, .clients-list-heading h2, .performance-list-heading h2,
+  .attendance-table-heading h2 { color: #23445f; }
+  .clients-table th, .performance-table th { color: #fff; }
+  .clients-table thead { background: #dcecf8; }
+  .clients-table th { color: #315f7e; }
+  .performance-table thead { background: #3b7eaa; }
+  .clients-history-modal li, .attendance-table td, .admin-users-table td { color: #36566e; border-color: rgba(83,142,180,.14); }
+  .clients-history-modal li time { color: #627d91; }
+  .attendance-metric > strong { color: #2d6d92; }
+  .attendance-table-heading > div > span { color: #3b7ca5; }
+  .attendance-table-heading p b { color: #a97616; }
+  .attendance-table tbody tr, .attendance-table tbody tr:nth-child(even) { background: #fbfdff; }
+  .attendance-table tbody tr:nth-child(even) { background: #f1f8fc; }
+  .attendance-table tbody tr:hover { background: #e5f2fa; }
+  .attendance-number-head, .attendance-employee-head, .attendance-action-head { background: #e2eef7; color: #315f7e !important; }
+  .attendance-employee-name { color: #23445f !important; }
+  .attendance-select { background: #fff; border-color: rgba(83,142,180,.24); color: #315f7e; }
+  .attendance-action-cell { background: #eef5fa; }
+  .attendance-status-label, .attendance-row-number, .attendance-empty { color: #627d91 !important; }
+  .admin-user-search input, .admin-user-modal { color: #23445f; }
+  .admin-users-table thead { background: #dcecf8; }
+  .admin-users-table th, .admin-user-name { color: #315f7e !important; }
+  .admin-users-empty { color: #627d91 !important; }
+  .admin-user-modal { background: #f8fbfe; color: #23445f; }
+  .admin-user-modal > span { color: #3b7ca5; }
+  .admin-user-modal-close { color: #5c7488; }
+  .admin-user-password small { color: #627d91; }
+
+  .raw-material-modal, .clients-modal, .performance-preview-dialog,
+  .profile-preview-dialog, .admin-photo-preview {
+    border-color: rgba(212,169,62,.42);
+    background: linear-gradient(145deg,#f9fcff,#e2f0fa);
+    color: #23445f;
+    box-shadow: 0 24px 65px rgba(45,91,125,.25);
+  }
+  .raw-material-modal-close, .raw-material-modal > p, .clients-modal-close,
+  .clients-modal > p, .profile-preview-close, .profile-preview-dialog > p,
+  .admin-photo-preview > button:first-child, .admin-photo-preview p { color: #5c7488; }
+  .profile-preview-add, .profile-preview-delete, .admin-photo-preview label,
+  .admin-photo-remove-large { background: rgba(255,255,255,.82); border-color: rgba(83,142,180,.22); color: #8b6414; }
+  .profile-preview-delete, .admin-photo-remove-large { color: #a34842; }
+  .dashboard-avatar, .admin-profile-avatar { background: linear-gradient(145deg,#b9ddf3,#6aa7cb); }
+  .profile-action, .admin-profile-action { background: rgba(255,255,255,.84); border-color: rgba(83,142,180,.2); color: #365f7d; }
+  .profile-add, .admin-profile-action:not(.admin-profile-remove) { color: #a97616; }
+  .profile-photo-notice, .admin-photo-notice { color: #4f6c82; }
+  .profile-photo-toast { background: rgba(255,255,255,.98); border-color: rgba(212,169,62,.32); color: #36566e; }
+}
