@@ -8,7 +8,6 @@
     "dev:api": "node --env-file=.env.local --import tsx --watch server/index.ts",
     "dev:web": "vite",
     "migrate:presentations": "node --env-file-if-exists=.env.local --import tsx server/migrateInventoryPresentations.ts",
-    "prebuild": "npm run migrate:presentations",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview"

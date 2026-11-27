@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs'
 import mysql from 'mysql2/promise'
+import { inventoryPresentationsSchema } from './inventoryPresentationsSchema.js'
 
 const connection = await mysql.createConnection({
   host: process.env.MYSQL_HOST ?? process.env.TIDB_HOST ?? 'localhost',
@@ -12,8 +12,7 @@ const connection = await mysql.createConnection({
 })
 
 try {
-  const sql = readFileSync(new URL('../database/inventario_presentaciones.sql', import.meta.url), 'utf8')
-  await connection.query(sql)
+  await connection.query(inventoryPresentationsSchema)
   console.log('Tabla inventario_presentaciones lista.')
 } finally {
   await connection.end()

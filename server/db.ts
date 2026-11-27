@@ -1,6 +1,7 @@
 import type { ResultSetHeader, RowDataPacket } from 'mysql2'
 import mysql from 'mysql2/promise'
 import { inventoryPresentationFamily } from '../src/inventoryPresentations.js'
+import { inventoryPresentationsSchema } from './inventoryPresentationsSchema.js'
 
 const pool = mysql.createPool({
   host: process.env.MYSQL_HOST ?? process.env.TIDB_HOST ?? 'localhost',
@@ -14,6 +15,21 @@ const pool = mysql.createPool({
   connectionLimit: 5,
   queueLimit: 0,
 })
+
+let inventoryPresentationsReady: Promise<void> | null = null
+
+export async function ensureInventoryPresentations() {
+  if (!inventoryPresentationsReady) {
+    inventoryPresentationsReady = pool
+      .query(inventoryPresentationsSchema)
+      .then(() => undefined)
+      .catch((error: unknown) => {
+        inventoryPresentationsReady = null
+        throw error
+      })
+  }
+  await inventoryPresentationsReady
+}
 
 type StatusRow = RowDataPacket & { database_name: string; mysql_version: string }
 export type ViletProduct = RowDataPacket & { id_producto: number; nombre: string; unidad: 'KG' | 'PZA' | 'AMBOS' }
@@ -78,6 +94,7 @@ export type InventoryPresentationBalanceRow = RowDataPacket & {
 }
 
 export async function readInventoryPresentationBalances() {
+  await ensureInventoryPresentations()
   const [rows] = await pool.query<InventoryPresentationBalanceRow[]>(
     'SELECT id_producto, presentacion, piezas, entradas_piezas, salidas_piezas FROM inventario_presentaciones ORDER BY id_producto, presentacion',
   )
@@ -139,6 +156,7 @@ export async function closeDatabasePool() {
 }
 
 export async function addInventoryEntry(idProducto: number, cantidad: number, unidad: 'KG' | 'PZA', presentacion: string, usuario: string, observaciones: string) {
+  await ensureInventoryPresentations()
   const connection = await pool.getConnection()
   try {
     await connection.beginTransaction()
@@ -210,6 +228,7 @@ export async function addInventoryEntry(idProducto: number, cantidad: number, un
 }
 
 export async function addInventoryExit(idProducto: number, cantidad: number, unidad: 'KG' | 'PZA', presentacion: string, usuario: string, motivo: string, cliente: string) {
+  await ensureInventoryPresentations()
   const connection = await pool.getConnection()
   try {
     await connection.beginTransaction()
