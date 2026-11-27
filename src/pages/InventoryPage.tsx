@@ -44,7 +44,9 @@ export function InventoryPage({ isLight, onBack, onOpenHistory, roleLabel = 'SEC
   const [movements, setMovements] = useState<InventoryMovement[]>([])
   const [presentationBalances, setPresentationBalances] = useState<InventoryPresentationBalance[]>([])
   const [loading, setLoading] = useState(true)
+  const [inventoryLoaded, setInventoryLoaded] = useState(false)
   const [error, setError] = useState('')
+  const [warning, setWarning] = useState('')
   const [lastUpdated, setLastUpdated] = useState('')
   const [reportDate, setReportDate] = useState('')
   const [movementMode, setMovementMode] = useState<MovementMode | null>(null)
@@ -58,18 +60,32 @@ export function InventoryPage({ isLight, onBack, onOpenHistory, roleLabel = 'SEC
   async function refreshInventory() {
     setLoading(true)
     setError('')
-    try {
-      const [result, movementResult, presentationResult] = await Promise.all([fetchInventory(), fetchInventoryMovements(), fetchInventoryPresentations()])
-      setItems(result)
-      setMovements(movementResult)
-      setPresentationBalances(presentationResult)
+    setWarning('')
+    const auxiliaryErrors: string[] = []
+    let inventorySucceeded = false
+
+    await Promise.all([
+      fetchInventory().then((result) => {
+        setItems(result)
+        setInventoryLoaded(true)
+        inventorySucceeded = true
+      }).catch((reason) => {
+        setError(reason instanceof Error ? reason.message : 'No se pudo consultar el inventario.')
+      }),
+      fetchInventoryMovements().then(setMovements).catch((reason) => {
+        auxiliaryErrors.push(reason instanceof Error ? reason.message : 'No se pudo consultar el historial.')
+      }),
+      fetchInventoryPresentations().then(setPresentationBalances).catch((reason) => {
+        auxiliaryErrors.push(reason instanceof Error ? reason.message : 'No se pudo consultar las presentaciones.')
+      }),
+    ])
+
+    if (inventorySucceeded) {
       setLastUpdated(new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }))
       setReportDate(new Date().toLocaleString('es-MX'))
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'No se pudo consultar el inventario.')
-    } finally {
-      setLoading(false)
     }
+    if (auxiliaryErrors.length > 0) setWarning(auxiliaryErrors.join(' '))
+    setLoading(false)
   }
 
   useEffect(() => { void refreshInventory() }, [])
@@ -210,10 +226,11 @@ export function InventoryPage({ isLight, onBack, onOpenHistory, roleLabel = 'SEC
       </header>
 
       {error && <div className="inventory-error" role="alert">{error}</div>}
+      {warning && <div className="inventory-warning" role="status">{warning}</div>}
       {notice && <div className="inventory-notice" role="status">{notice}</div>}
       {loading && items.length === 0 ? (
         <div className="inventory-message">Cargando inventario de Vilet…</div>
-      ) : (
+      ) : !inventoryLoaded && error ? null : (
         <>
           <div className="inventory-family-grid">
             {families.map((family) => {
@@ -257,7 +274,7 @@ export function InventoryPage({ isLight, onBack, onOpenHistory, roleLabel = 'SEC
             <span className="inventory-count">{items.length} productos</span>
           </div>
 
-          {items.length === 0 ? (
+          {inventoryLoaded && items.length === 0 && !error ? (
             <div className="inventory-message">No hay productos registrados en la base de datos.</div>
           ) : (
             <div className="inventory-product-grid">

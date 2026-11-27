@@ -1,7 +1,6 @@
 import type { ResultSetHeader, RowDataPacket } from 'mysql2'
 import mysql from 'mysql2/promise'
 import { inventoryPresentationFamily } from '../src/inventoryPresentations.js'
-import { inventoryPresentationsSchema } from './inventoryPresentationsSchema.js'
 
 const pool = mysql.createPool({
   host: process.env.MYSQL_HOST ?? process.env.TIDB_HOST ?? 'localhost',
@@ -15,21 +14,6 @@ const pool = mysql.createPool({
   connectionLimit: 5,
   queueLimit: 0,
 })
-
-let inventoryPresentationsReady: Promise<void> | null = null
-
-export async function ensureInventoryPresentations() {
-  if (!inventoryPresentationsReady) {
-    inventoryPresentationsReady = pool
-      .query(inventoryPresentationsSchema)
-      .then(() => undefined)
-      .catch((error: unknown) => {
-        inventoryPresentationsReady = null
-        throw error
-      })
-  }
-  await inventoryPresentationsReady
-}
 
 type StatusRow = RowDataPacket & { database_name: string; mysql_version: string }
 export type ViletProduct = RowDataPacket & { id_producto: number; nombre: string; unidad: 'KG' | 'PZA' | 'AMBOS' }
@@ -93,12 +77,41 @@ export type InventoryPresentationBalanceRow = RowDataPacket & {
   salidas_piezas: number | string
 }
 
-export async function readInventoryPresentationBalances() {
-  await ensureInventoryPresentations()
-  const [rows] = await pool.query<InventoryPresentationBalanceRow[]>(
-    'SELECT id_producto, presentacion, piezas, entradas_piezas, salidas_piezas FROM inventario_presentaciones ORDER BY id_producto, presentacion',
+type InventoryConnection = Awaited<ReturnType<typeof pool.getConnection>>
+
+async function readPresentationBalancesFromDetails(connection: InventoryConnection, productName?: string) {
+  const [rows] = await connection.execute<InventoryPresentationBalanceRow[]>(
+    `SELECT id_producto, presentacion,
+      SUM(entradas) AS entradas_piezas,
+      SUM(salidas) AS salidas_piezas,
+      SUM(entradas) - SUM(salidas) AS piezas
+     FROM (
+       SELECT p.id_producto, p.nombre AS producto, UPPER(TRIM(d.presentacion)) AS presentacion, d.cantidad AS entradas, 0 AS salidas
+       FROM inventario_detalle d
+       JOIN productos p ON p.nombre = d.producto
+       WHERE LOWER(p.nombre) IN ('oaxaca', 'panela') AND UPPER(d.tipo) = 'PZA'
+       UNION ALL
+       SELECT p.id_producto, p.nombre AS producto, UPPER(TRIM(s.presentacion)) AS presentacion, 0 AS entradas, s.cantidad AS salidas
+       FROM salidas_detalle s
+       JOIN productos p ON p.nombre = s.producto
+       WHERE LOWER(p.nombre) IN ('oaxaca', 'panela')
+     ) AS movimientos
+     WHERE (? IS NULL OR LOWER(producto) = LOWER(?))
+       AND presentacion IN ('0.50', '1.00', 'GR', 'C0.5', 'B0.5', 'C', 'M')
+     GROUP BY id_producto, presentacion
+     ORDER BY id_producto, presentacion`,
+    [productName ?? null, productName ?? ''],
   )
   return rows
+}
+
+export async function readInventoryPresentationBalances() {
+  const connection = await pool.getConnection()
+  try {
+    return await readPresentationBalancesFromDetails(connection)
+  } finally {
+    connection.release()
+  }
 }
 
 export type InventoryMovementRow = RowDataPacket & {
@@ -156,7 +169,6 @@ export async function closeDatabasePool() {
 }
 
 export async function addInventoryEntry(idProducto: number, cantidad: number, unidad: 'KG' | 'PZA', presentacion: string, usuario: string, observaciones: string) {
-  await ensureInventoryPresentations()
   const connection = await pool.getConnection()
   try {
     await connection.beginTransaction()
@@ -204,15 +216,6 @@ export async function addInventoryEntry(idProducto: number, cantidad: number, un
       )
     }
 
-    if (family) {
-      await connection.execute(
-        `INSERT INTO inventario_presentaciones (id_producto, presentacion, piezas, entradas_piezas, salidas_piezas)
-         VALUES (?, ?, ?, ?, 0)
-         ON DUPLICATE KEY UPDATE piezas = piezas + VALUES(piezas), entradas_piezas = entradas_piezas + VALUES(entradas_piezas), fecha_actualizacion = NOW()`,
-        [idProducto, effectivePresentation, cantidad, cantidad],
-      )
-    }
-
     await connection.execute(
       'INSERT INTO inventario_detalle (producto, presentacion, cantidad, tipo, usuario, observaciones) VALUES (?, ?, ?, ?, ?, ?)',
       [product.nombre, effectivePresentation, cantidad, unidad.toLowerCase(), usuario, observaciones],
@@ -228,7 +231,6 @@ export async function addInventoryEntry(idProducto: number, cantidad: number, un
 }
 
 export async function addInventoryExit(idProducto: number, cantidad: number, unidad: 'KG' | 'PZA', presentacion: string, usuario: string, motivo: string, cliente: string) {
-  await ensureInventoryPresentations()
   const connection = await pool.getConnection()
   try {
     await connection.beginTransaction()
@@ -265,22 +267,13 @@ export async function addInventoryExit(idProducto: number, cantidad: number, uni
       return 'insufficient-stock' as const
     }
 
-    if (family && !unassigned) {
-      const [presentationRows] = await connection.execute<(RowDataPacket & { piezas: number | string })[]>(
-        'SELECT piezas FROM inventario_presentaciones WHERE id_producto = ? AND presentacion = ? LIMIT 1 FOR UPDATE',
-        [idProducto, effectivePresentation],
-      )
-      if (!presentationRows[0] || Number(presentationRows[0].piezas) < cantidad) {
-        await connection.rollback()
-        return 'insufficient-stock' as const
-      }
-    } else if (unassigned) {
-      const [presentationRows] = await connection.execute<(RowDataPacket & { piezas: number | string })[]>(
-        'SELECT piezas FROM inventario_presentaciones WHERE id_producto = ? FOR UPDATE',
-        [idProducto],
-      )
-      const assigned = presentationRows.reduce((sum, row) => sum + Number(row.piezas), 0)
-      if (stock - assigned < cantidad) {
+    if (family) {
+      const balances = await readPresentationBalancesFromDetails(connection, product.nombre)
+      const assigned = balances.reduce((sum, row) => sum + Number(row.piezas), 0)
+      const available = unassigned
+        ? stock - assigned
+        : Number(balances.find((row) => row.presentacion === effectivePresentation)?.piezas ?? 0)
+      if (available < cantidad) {
         await connection.rollback()
         return 'insufficient-stock' as const
       }
@@ -295,13 +288,6 @@ export async function addInventoryExit(idProducto: number, cantidad: number, uni
       await connection.execute(
         'UPDATE inventario SET stock_piezas = stock_piezas - ?, salidas_piezas = COALESCE(salidas_piezas, 0) + ?, fecha_actualizacion = NOW() WHERE id_inventario = ?',
         [cantidad, cantidad, inventory.id_inventario],
-      )
-    }
-
-    if (family && !unassigned) {
-      await connection.execute(
-        'UPDATE inventario_presentaciones SET piezas = piezas - ?, salidas_piezas = salidas_piezas + ?, fecha_actualizacion = NOW() WHERE id_producto = ? AND presentacion = ?',
-        [cantidad, cantidad, idProducto, effectivePresentation],
       )
     }
 

@@ -91,6 +91,15 @@ async function requestJson<T>(path: string, options: RequestInit = {}): Promise<
     }
 
     if (canRetry && (response.status === 429 || response.status === 502 || response.status === 503 || response.status === 504)) {
+      if (response.status === 503) {
+        const body = await response.clone().text().catch(() => '')
+        try {
+          const result = JSON.parse(body) as { message?: unknown }
+          if (typeof result.message === 'string') return readJsonResponse<T>(response)
+        } catch {
+          // Un 503 sin JSON de la aplicación puede ser una falla temporal de Vercel.
+        }
+      }
       await response.text().catch(() => undefined)
       lastError = new Error('El servidor está respondiendo temporalmente con lentitud.')
       if (attempt === 2) break

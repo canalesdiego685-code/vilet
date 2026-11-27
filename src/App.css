@@ -2306,4 +2306,21 @@
 .admin-dashboard-toolbar { background: rgba(20,57,91,.94); border-color: rgba(137,197,242,.2); }
 .admin-dashboard-card { background: linear-gradient(150deg,rgba(28,73,113,.98),rgba(18,48,79,.98)); border-color: rgba(137,197,242,.18); }
 .admin-dashboard-card:hover { background: linear-gradient(150deg,#245f91,#173d63); }
-.admin-dashboard-brand>span { color: #9fd3ff; }
+.admin-dashboard-brand>span { color: #b5e2ff; }
+
+.inventory-warning { margin: 0 0 14px; padding: 11px 14px; border: 1px solid rgba(245,202,91,.32); border-radius: 10px; background: rgba(116,78,20,.28); color: #ffe4a3; font-size: 12px; text-align: center; }
+.inventory-screen-light .inventory-warning { background: rgba(255,244,205,.94); border-color: rgba(167,126,30,.3); color: #6f5312; }
+.vilet-app.secretary-experience:not(.theme-light) { background: linear-gradient(115deg,rgba(24,67,103,.8),rgba(40,104,151,.72) 48%,rgba(22,70,108,.82)),url("/vilet-background.png") center / cover fixed no-repeat; background-attachment:scroll,fixed; }
+.inventory-toolbar { background: linear-gradient(115deg,rgba(33,91,137,.96),rgba(28,78,122,.95)); }
+.inventory-family-card,.inventory-product-card,.inventory-history-card,.inventory-count { background: rgba(24,67,103,.95); border-color: rgba(158,211,250,.19); }
+.inventory-family-table th { background: rgba(42,104,155,.98); }
+.inventory-summary-card { background: linear-gradient(135deg,rgba(47,113,165,.96),rgba(25,71,112,.96)); }
+.inventory-modal { background: linear-gradient(145deg,#2b76ad,#1a4d79); }
+.secretary-toolbar { background: linear-gradient(100deg,rgba(33,91,137,.94),rgba(28,78,122,.92)); }
+.secretary-module-card { background: linear-gradient(145deg,rgba(30,81,126,.97),rgba(23,63,101,.95)); }
+.secretary-module-card:hover { background: linear-gradient(145deg,rgba(40,103,156,.98),rgba(29,76,120,.97)); }
+.admin-dashboard-toolbar { background: linear-gradient(105deg,rgba(33,91,137,.96),rgba(28,78,122,.95)); }
+.admin-dashboard-card { background: linear-gradient(150deg,rgba(38,99,151,.98),rgba(25,68,110,.98)); }
+.admin-dashboard-card:hover { background: linear-gradient(150deg,#327fb6,#205c8e); }
+.admin-dashboard-welcome { background: linear-gradient(110deg,rgba(35,79,121,.97),rgba(28,65,103,.95) 78%,rgba(37,82,128,.96)); }
+@media print { .inventory-warning { display: none !important; } }
